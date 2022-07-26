@@ -20,6 +20,7 @@ export class NovaJob {
       const page = await browser.newPage()
       await page.goto('https://www.nova.fr/c-etait-quoi-ce-titre/')
       const cookies = await page.$('#didomi-notice-agree-button')
+      console.log('Test push')
       await cookies?.click()
       success()
     } catch (error) {
