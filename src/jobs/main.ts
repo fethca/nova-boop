@@ -2,6 +2,7 @@ import { formatDate } from '@src/helpers/formatDate'
 import { ILogger } from '@src/logger'
 import { redisStore } from '@src/services/redis'
 import { Message, settings } from '@src/settings'
+import { NovaJob } from './nova'
 
 const LAST_UPDATE_KEY = 'last-update'
 
@@ -15,7 +16,7 @@ export class MainJob {
     const toDate = formatDate(to + 1000)
     const { success, failure } = this.logger.action('process_item')
     try {
-      await this.fetchItems(fromDate, toDate)
+      await new NovaJob(this.logger.child()).fetchItems(fromDate, toDate)
       await this.updateDate(to)
       success()
     } catch (error) {

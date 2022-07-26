@@ -40,5 +40,8 @@
     "typescript-transform-paths": "^3.3.1",
     "winston": "^3.8.0",
     "winston-transport": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/puppeteer": "^5.4.6"
   }
 }
