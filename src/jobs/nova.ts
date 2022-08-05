@@ -2,7 +2,32 @@ import { formatDate } from '@src/helpers/formatDate'
 import { ILogger } from '@src/logger'
 import { Message } from '@src/settings'
 import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
-import * as puppeteer from 'puppeteer'
+import { DEFAULT_INTERCEPT_RESOLUTION_PRIORITY, Page } from 'puppeteer'
+import puppeteer from 'puppeteer-extra'
+import BlockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+
+puppeteer
+  .use(
+    BlockResourcesPlugin({
+      blockedTypes: new Set([
+        'stylesheet',
+        'image',
+        'media',
+        'font',
+        'texttrack',
+        'fetch',
+        'eventsource',
+        'websocket',
+        'manifest',
+      ]),
+      interceptResolutionPriority: DEFAULT_INTERCEPT_RESOLUTION_PRIORITY,
+    })
+  )
+  .use(StealthPlugin())
+
+const USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36'
 
 export class NovaJob {
   constructor(private logger: ILogger<Message>) {}
@@ -17,7 +42,24 @@ export class NovaJob {
   async scrappe(fromDate: string, toDate: string) {
     const { success, failure } = this.logger.action('nova_scrapping')
 
-    const browser = await puppeteer.launch({ headless: false, defaultViewport: null })
+    const browser = await puppeteer.launch({
+      headless: false,
+      devtools: false,
+      ignoreHTTPSErrors: true,
+      slowMo: 0,
+      defaultViewport: null,
+      args: [
+        '--disable-gpu',
+        '--no-sandbox',
+        '--no-zygote',
+        '--disable-setuid-sandbox',
+        '--disable-accelerated-2d-canvas',
+        '--disable-dev-shm-usage',
+        "--proxy-server='direct://'",
+        '--proxy-bypass-list=*',
+      ],
+    })
+
     try {
       const page = await browser.newPage()
       await page.goto('https://www.nova.fr/c-etait-quoi-ce-titre/')
@@ -27,7 +69,7 @@ export class NovaJob {
 
       const from = await getLastUpdateDate(this.logger.child())
       const fromDate = formatDate(from)
-      
+
       // let count = 0
       // while (count < 50) {
       //   await this.loadMore(page)
@@ -41,7 +83,7 @@ export class NovaJob {
     }
   }
 
-  async loadMore(page: puppeteer.Page) {
+  async loadMore(page: Page) {
     const { success, failure } = this.logger.action('nova_load_more')
     try {
       const loadMore = await page.$('#load_more')
