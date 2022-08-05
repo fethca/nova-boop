@@ -17,7 +17,6 @@ export class MainJob {
     const { success, failure } = this.logger.action('process_item')
     try {
       await new NovaJob(this.logger.child()).fetchItems(fromDate, toDate)
-      await this.updateDate(to)
       success()
     } catch (error) {
       failure({ error })
@@ -46,17 +45,6 @@ export class MainJob {
 
   private async setLastUpdateDate(timestamp: number): Promise<void> {
     return redisStore.set(LAST_UPDATE_KEY, timestamp.toString())
-  }
-
-  private async updateDate(date: number): Promise<void> {
-    const newDate = formatDate(date)
-    const { success, failure } = this.logger.action('redis_update_date')
-    try {
-      await this.setLastUpdateDate(date)
-      success({ newDate })
-    } catch (error) {
-      failure(error)
-    }
   }
 
   private async fetchItems(fromDate: string, toDate: string): Promise<void> {

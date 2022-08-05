@@ -49,6 +49,9 @@ const messages = [
   'redis_update_date',
   'nova_fetch_items',
   'nova_scrapping',
+  'nova_load_more',
+  'redis_no_date_found_using_now',
+  'redis_resetting_server_date',
   'in_here',
 ] as const
 

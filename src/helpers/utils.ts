@@ -3,9 +3,3 @@ export function click(element: unknown) {
     element.click()
   }
 }
-
-export function isHTMLElement(element: unknown) {
-  if (element instanceof HTMLElement) {
-    return element
-  }
-}
