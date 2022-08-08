@@ -52,7 +52,10 @@ const messages = [
   'nova_load_more',
   'redis_no_date_found_using_now',
   'redis_resetting_server_date',
-  'in_here',
+  'puppeteer_run_browser',
+  'puppeteer_browser_disconnected',
+  'puppeteer_create_page',
+  'puppeteer_stop_browser',
 ] as const
 
 export type Message = typeof messages[number]

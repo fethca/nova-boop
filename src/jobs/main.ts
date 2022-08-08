@@ -16,7 +16,10 @@ export class MainJob {
     const toDate = formatDate(to + 1000)
     const { success, failure } = this.logger.action('process_item')
     try {
-      await new NovaJob(this.logger.child()).fetchItems(fromDate, toDate)
+      await new NovaJob(this.logger.child()).fetchItems(
+        fromDate.format('YYYY-MM-DD HH:mm:ss'),
+        toDate.format('YYYY-MM-DD HH:mm:ss')
+      )
       success()
     } catch (error) {
       failure({ error })

@@ -1,5 +1,5 @@
-import moment from 'moment'
+import moment, { Moment } from 'moment'
 
-export function formatDate(date: number): string {
-  return moment.utc(date).format('YYYY-MM-DD HH:mm:ss')
+export function formatDate(date: number): Moment {
+  return moment.utc(date)
 }
