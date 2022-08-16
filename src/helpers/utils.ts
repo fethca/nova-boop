@@ -3,3 +3,9 @@ export function click(element: unknown) {
     element.click()
   }
 }
+
+export function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}

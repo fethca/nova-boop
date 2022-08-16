@@ -1,9 +1,11 @@
 import { formatDate } from '@src/helpers/formatDate'
+import { click, sleep } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
 import { PuppeteerManager } from '@src/modules/puppeteer'
 import { Message } from '@src/settings'
 import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
-import { Browser, Page } from 'puppeteer'
+import { Browser, ElementHandle, Page } from 'puppeteer'
+
 export class NovaJob {
   puppeteerService = new PuppeteerManager(this.logger.child())
 
@@ -30,12 +32,25 @@ export class NovaJob {
       await cookies?.click()
 
       const from = await getLastUpdateDate(this.logger.child())
-      const fromDate = formatDate(from)
-      const day = fromDate.day()
-      const month = fromDate.month()
-      const year = fromDate.year()
-      const hour = fromDate.hour()
-      const minute = fromDate.minute()
+      const fromDate = formatDate(from).format('MM/DD/YYYY')
+      const toDate = formatDate(Date.now())
+
+      const calendar = await page.$('input[name=programDate]')
+      await calendar?.focus()
+      await calendar?.type(fromDate)
+
+      const filtrer = await page.waitForXPath("//*[contains(text(), 'Filtrer')]")
+      await filtrer?.evaluate(click)
+
+      await this.loadMore(page)
+      await sleep(500)
+
+      const songsBlock = await page.$('#js-programs-list')
+      const songs = await songsBlock?.$$('.wwtt_right')
+      if (songs) await this.extract(songs)
+
+      // if (filtrer) filtrer.click()
+
       // let count = 0
       // while (count < 50) {
       //   await this.loadMore(page)
@@ -58,6 +73,18 @@ export class NovaJob {
     } catch (error) {
       failure(error)
     }
+  }
+
+  async extract(elements: ElementHandle<Element>[]) {
+    let songs: Array<unknown> = []
+    for (let element of elements) {
+      const hour = await element.$eval('.time', (el) => el.textContent)
+      const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
+      const spotify = platforms.map((platform) => (platform.includes('spotify') ? platform : null)).filter(Boolean)[0]
+      const song = { hour, spotify }
+      songs.push(song)
+    }
+    return songs
   }
 
   async updateDate(date: number): Promise<void> {

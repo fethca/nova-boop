@@ -41,21 +41,22 @@ export const settings = {
 }
 
 const messages = [
-  'process_item',
-  'get_nova_list',
   'connect_spotify',
-  'redis_no_date_found',
-  'redis_resetting_server_date',
-  'redis_update_date',
+  'get_nova_list',
+  'nova_extract',
   'nova_fetch_items',
-  'nova_scrapping',
   'nova_load_more',
-  'redis_no_date_found_using_now',
-  'redis_resetting_server_date',
-  'puppeteer_run_browser',
+  'nova_scrapping',
+  'process_item',
   'puppeteer_browser_disconnected',
   'puppeteer_create_page',
+  'puppeteer_run_browser',
   'puppeteer_stop_browser',
+  'redis_no_date_found',
+  'redis_no_date_found_using_now',
+  'redis_resetting_server_date',
+  'redis_resetting_server_date',
+  'redis_update_date',
 ] as const
 
 export type Message = typeof messages[number]
