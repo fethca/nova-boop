@@ -57,6 +57,7 @@ const messages = [
   'redis_resetting_server_date',
   'redis_resetting_server_date',
   'redis_update_date',
+  'nova_scrapping_day',
 ] as const
 
 export type Message = typeof messages[number]

@@ -4,7 +4,7 @@ import { ILogger } from '@src/logger'
 import { PuppeteerManager } from '@src/modules/puppeteer'
 import { Message } from '@src/settings'
 import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
-import moment from 'moment'
+import moment, { Moment } from 'moment'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 
 const avgSongsPerHour = 15
@@ -36,7 +36,9 @@ export class NovaJob {
 
       const storedDate = await getLastUpdateDate(this.logger.child())
       const from = formatDate(storedDate)
-      const diff = moment().diff(from, 'days')
+      const now = moment(Date.now())
+
+      const diff = this.calculateDiff(from)
 
       const firstDay = await this.firstDay(page, from)
       const nextDays = await this.nextDays(page, from, diff)
@@ -58,50 +60,61 @@ export class NovaJob {
     }
   }
 
-  async firstDay(page: Page, from): Promise<unknown[]> {
+  calculateDiff(from: Moment) {
+    const fromDate = moment(moment.utc(from).startOf('day'))
+    const nowDate = moment(moment.utc(Date.now()).startOf('day'))
+    return nowDate.diff(fromDate, 'days')
+  }
+
+  async firstDay(page: Page, from: Moment): Promise<unknown[]> {
     const fromDate = from.format('MM/DD/YYYY')
-
-    const calendar = await page.$('input[name=programDate]')
-    await calendar?.focus()
-    await calendar?.type(fromDate)
-
-    const selects = await page.$$('.ui-timepicker-select')
-
-    const hourDate = from.hour()
-    const hour = selects[0]
-    await hour?.select(hourDate.toString())
-
-    const minuteDate = from.minute()
-    const minute = selects[1]
-    await minute?.select(minuteDate.toString())
-
-    const filtrer = await page.waitForXPath("//*[contains(text(), 'Filtrer')]")
-    await filtrer?.evaluate(click)
-
-    const times = this.calculateLoad(hourDate)
-
-    await this.loadMore(page, times)
-    await sleep(500)
-
-    const songsBlock = await page.$('#js-programs-list')
-    const songs = await songsBlock?.$$('.wwtt_right')
-    if (songs) return await this.extract(songs)
-    else return []
+    const firstDay = await this.scrappeDay(page, fromDate, from.hour().toString(), from.minute().toString())
+    return firstDay || []
   }
 
-  async nextDays(page: Page, from, diff: number): Promise<unknown[]> {
-    return []
+  async nextDays(page: Page, from: Moment, diff: number): Promise<unknown[]> {
+    const result: Array<unknown> = []
+    for (let i = 1; i <= diff; i++) {
+      const fromDate = from.clone().add(i, 'days').format('MM/DD/YYYY')
+      const songs = await this.scrappeDay(page, fromDate)
+      if (songs) result.push(songs)
+    }
+    return result
   }
 
-  async loadMore(page: Page, times: number = 10) {
-    const { success, failure } = this.logger.action('nova_load_more')
+  async scrappeDay(
+    page: Page,
+    beginDate: string,
+    hour: string = '23',
+    minute: string = '59'
+  ): Promise<unknown[] | undefined> {
+    const { success, failure } = this.logger.action('nova_scrapping_day', { beginDate })
     try {
-      const loadMore = await page.$('#load_more')
-      for (let i = 0; i <= times; i++) {
-        await loadMore?.click()
-        await sleep(500)
-      }
-      success()
+      const calendar = await page.$('input[name=programDate]')
+      await calendar?.focus()
+      await calendar?.type(beginDate)
+
+      const selects = await page.$$('.ui-timepicker-select')
+
+      const hourInput = selects[0]
+      await hourInput?.select(hour)
+
+      const minuteInput = selects[1]
+      await minuteInput?.select(minute)
+
+      const filtrer = await page.waitForXPath("//*[contains(text(), 'Filtrer')]")
+      await filtrer?.evaluate(click)
+
+      const times = this.calculateLoad(parseInt(hour))
+
+      await this.loadMore(page, times)
+      await sleep(500)
+
+      const songsBlock = await page.$('#js-programs-list')
+      const songs = await songsBlock?.$$('.wwtt_right')
+      const result = songs ? await this.extract(songs) : []
+      success({ result })
+      return result
     } catch (error) {
       failure(error)
     }
@@ -111,8 +124,27 @@ export class NovaJob {
     return Math.ceil(((hour + 1) * avgSongsPerHour) / 10) //load more displays 10 more songs
   }
 
+  async loadMore(page: Page, times: number = 10) {
+    const { success, failure } = this.logger.action('nova_load_more')
+    try {
+      const loadMore = await page.$('#load_more')
+      for (let i = 0; i <= times; i++) {
+        const style = await loadMore?.evaluate((a) => a.getAttribute('style'))
+        if (style && style === 'display: none;') {
+          console.log('Style = ', style)
+          return
+        }
+        await loadMore?.click()
+        await sleep(500)
+      }
+      success()
+    } catch (error) {
+      failure(error)
+    }
+  }
+
   async extract(elements: ElementHandle<Element>[]): Promise<unknown[]> {
-    let songs: Array<unknown> = []
+    const songs: Array<unknown> = []
     for (let element of elements) {
       const hour = await element.$eval('.time', (el) => el.textContent)
       const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
