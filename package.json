@@ -23,6 +23,7 @@
     "@types/jsdom": "^20.0.0",
     "@types/node": "^13.5.2",
     "@types/random-useragent": "^0.3.1",
+    "@types/spotify-web-api-node": "^5.0.7",
     "axios": "^0.27.2",
     "dotenv": "^16.0.1",
     "envalid": "^7.3.1",

@@ -762,6 +762,18 @@
   resolved "https://registry.yarnpkg.com/@types/random-useragent/-/random-useragent-0.3.1.tgz#1f0e1e08151f04d2c023ab77c8173dfa5b5049d2"
   integrity sha512-yVz7897JjjwS6V+lmxlu8pktzNnNWgtF9MGxfaRfI8o+hQageO9K+0hfwr8PspdFJIIRE9KkLqp4o5tlQqv/0w==
 
+"@types/spotify-api@*":
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/@types/spotify-api/-/spotify-api-0.0.17.tgz#cdd3834508f171939340bdf813cc10af05cf4083"
+  integrity sha512-9CM+iRqR3EBF3pw2WTXKcKPghiEV4HYxIfRvdHstT6QRrcYOQMjLNvI0qCwab/w5RkupNxDgnGHvOrsalLCUWQ==
+
+"@types/spotify-web-api-node@^5.0.7":
+  version "5.0.7"
+  resolved "https://registry.yarnpkg.com/@types/spotify-web-api-node/-/spotify-web-api-node-5.0.7.tgz#de5cb576781e0aaa38568744dfb891c86a7938ee"
+  integrity sha512-8ajd4xS3+l4Zau1OyggPv7DjeSFEIGYvG5Q8PbbBMKiaRFD53IkcvU4Bx4Ijyzw+l+Kc09L5L+MXRj0wyVLx9Q==
+  dependencies:
+    "@types/spotify-api" "*"
+
 "@types/stack-utils@^2.0.0":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@types/stack-utils/-/stack-utils-2.0.1.tgz#20f18294f797f2209b5f65c8e3b5c8e8261d127c"

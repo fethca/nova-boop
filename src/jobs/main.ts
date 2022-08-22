@@ -2,7 +2,9 @@ import { formatDate } from '@src/helpers/formatDate'
 import { ILogger } from '@src/logger'
 import { redisStore } from '@src/services/redis'
 import { Message, settings } from '@src/settings'
+import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
 import { NovaJob } from './nova'
+import { SpotifyJob } from './spotify'
 
 const LAST_UPDATE_KEY = 'last-update'
 
@@ -12,14 +14,12 @@ export class MainJob {
   async run(): Promise<void> {
     const to = Date.now() - settings.refresh.offset
     const from = await this.getLastUpdateDate()
-    const fromDate = formatDate(from)
-    const toDate = formatDate(to + 1000)
     const { success, failure } = this.logger.action('process_item')
     try {
-      await new NovaJob(this.logger.child()).fetchItems(
-        fromDate.format('YYYY-MM-DD HH:mm:ss'),
-        toDate.format('YYYY-MM-DD HH:mm:ss')
-      )
+      const storedDate = await getLastUpdateDate(this.logger.child())
+      const from = formatDate(storedDate)
+      const songs = await new NovaJob(this.logger.child()).run(from)
+      await new SpotifyJob(this.logger.child()).run(songs)
       success()
     } catch (error) {
       failure({ error })
@@ -50,10 +50,14 @@ export class MainJob {
     return redisStore.set(LAST_UPDATE_KEY, timestamp.toString())
   }
 
-  private async fetchItems(fromDate: string, toDate: string): Promise<void> {
-    const filter = {
-      // updated: [{ operator: 'BETWEEN', value: [fromDate, toDate] }],
-      // brand: [{ operator: 'IN', value: settings.brandsWhitelist }],
+  async updateDate(date: number): Promise<void> {
+    const newDate = formatDate(date)
+    const { success, failure } = this.logger.action('redis_update_date', { newDate })
+    try {
+      await setLastUpdateDate(date)
+      success()
+    } catch (error) {
+      failure(error)
     }
   }
 }

@@ -8,6 +8,7 @@ const env = validateEnv({
   ...redisValidators,
   SPOTIFY_ID: str(),
   SPOTIFY_SECRET: str(),
+  SPOTIFY_PLAYLIST: str(),
   REFRESH_INTERVAL: num({ default: 1000 * 60 }),
   REFRESH_OFFSET: num({ default: 1000 * 15 }),
 })
@@ -29,6 +30,7 @@ export const settings = {
   spotify: {
     id: env.SPOTIFY_ID,
     secret: env.SPOTIFY_SECRET,
+    playlist: env.SPOTIFY_PLAYLIST,
   },
   redis: {
     host: env.REDIS_HOST,
@@ -41,11 +43,10 @@ export const settings = {
 }
 
 const messages = [
-  'connect_spotify',
-  'get_nova_list',
   'nova_extract',
   'nova_fetch_items',
   'nova_load_more',
+  'nova_scrapping_day',
   'nova_scrapping',
   'process_item',
   'puppeteer_browser_disconnected',
@@ -57,7 +58,9 @@ const messages = [
   'redis_resetting_server_date',
   'redis_resetting_server_date',
   'redis_update_date',
-  'nova_scrapping_day',
+  'spotify_connect',
+  'spotify_handle_songs',
+  'spotify_get_playlist',
 ] as const
 
 export type Message = typeof messages[number]

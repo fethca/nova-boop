@@ -1,6 +1,5 @@
 import { settings } from '@src/settings'
-
-const SpotifyWebApi = require('spotify-web-api-node')
+import SpotifyWebApi from 'spotify-web-api-node'
 
 export const spotifyService = new SpotifyWebApi({
   clientId: settings.spotify.id,

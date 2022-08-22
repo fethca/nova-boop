@@ -1,9 +1,8 @@
-import { formatDate } from '@src/helpers/formatDate'
 import { click, sleep } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
+import { INovaSong } from '@src/models'
 import { PuppeteerManager } from '@src/modules/puppeteer'
 import { Message } from '@src/settings'
-import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
 import moment, { Moment } from 'moment'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 
@@ -14,17 +13,19 @@ export class NovaJob {
 
   constructor(private logger: ILogger<Message>) {}
 
-  async fetchItems(fromDate: string, toDate: string) {
+  async run(from: Moment): Promise<INovaSong[]> {
     const { success, failure } = this.logger.action('nova_fetch_items')
     try {
-      await this.scrappe(fromDate, toDate)
+      const songs = await this.scrappe(from)
       success()
+      return songs
     } catch (error) {
       failure(error)
+      throw error
     }
   }
 
-  async scrappe(fromDate: string, toDate: string) {
+  async scrappe(from: Moment): Promise<INovaSong[]> {
     const { success, failure } = this.logger.action('nova_scrapping')
     const browser: Browser = await this.puppeteerService.runBrowser()
 
@@ -34,29 +35,18 @@ export class NovaJob {
       const cookies = await page.$('#didomi-notice-agree-button')
       await cookies?.click()
 
-      const storedDate = await getLastUpdateDate(this.logger.child())
-      const from = formatDate(storedDate)
-      const now = moment(Date.now())
-
       const diff = this.calculateDiff(from)
 
       const firstDay = await this.firstDay(page, from)
       const nextDays = await this.nextDays(page, from, diff)
 
       const songs = [...firstDay, ...nextDays]
-
-      // if (filtrer) filtrer.click()
-
-      // let count = 0
-      // while (count < 50) {
-      //   await this.loadMore(page)
-      //   count++
-      //   console.log('count', count)
-      // }
-      success()
+      success({ nbSongs: songs.length })
+      return songs
     } catch (error) {
       await this.puppeteerService.release(browser)
       failure(error)
+      return []
     }
   }
 
@@ -66,28 +56,23 @@ export class NovaJob {
     return nowDate.diff(fromDate, 'days')
   }
 
-  async firstDay(page: Page, from: Moment): Promise<unknown[]> {
+  async firstDay(page: Page, from: Moment): Promise<INovaSong[]> {
     const fromDate = from.format('MM/DD/YYYY')
     const firstDay = await this.scrappeDay(page, fromDate, from.hour().toString(), from.minute().toString())
-    return firstDay || []
+    return firstDay
   }
 
-  async nextDays(page: Page, from: Moment, diff: number): Promise<unknown[]> {
-    const result: Array<unknown> = []
+  async nextDays(page: Page, from: Moment, diff: number): Promise<INovaSong[]> {
+    const result: INovaSong[] = []
     for (let i = 1; i <= diff; i++) {
       const fromDate = from.clone().add(i, 'days').format('MM/DD/YYYY')
       const songs = await this.scrappeDay(page, fromDate)
-      if (songs) result.push(songs)
+      if (songs) result.push(...songs)
     }
     return result
   }
 
-  async scrappeDay(
-    page: Page,
-    beginDate: string,
-    hour: string = '23',
-    minute: string = '59'
-  ): Promise<unknown[] | undefined> {
+  async scrappeDay(page: Page, beginDate: string, hour: string = '23', minute: string = '59'): Promise<INovaSong[]> {
     const { success, failure } = this.logger.action('nova_scrapping_day', { beginDate })
     try {
       const calendar = await page.$('input[name=programDate]')
@@ -113,27 +98,26 @@ export class NovaJob {
       const songsBlock = await page.$('#js-programs-list')
       const songs = await songsBlock?.$$('.wwtt_right')
       const result = songs ? await this.extract(songs) : []
-      success({ result })
+      success({ results: result.length })
       return result
     } catch (error) {
       failure(error)
+      return []
     }
   }
 
   calculateLoad(hour: number) {
-    return Math.ceil(((hour + 1) * avgSongsPerHour) / 10) //load more displays 10 more songs
+    return Math.ceil(((hour + 1) * avgSongsPerHour) / 10) //#load_more displays 10 more songs
   }
 
   async loadMore(page: Page, times: number = 10) {
     const { success, failure } = this.logger.action('nova_load_more')
     try {
       const loadMore = await page.$('#load_more')
-      for (let i = 0; i <= times; i++) {
-        const style = await loadMore?.evaluate((a) => a.getAttribute('style'))
-        if (style && style === 'display: none;') {
-          console.log('Style = ', style)
-          return
-        }
+      if (await this.isDisabled(loadMore)) await this.reset(loadMore) //reset style to ensure it's clickable at first
+      //+10 to ensure reaching limit for now, we'll see if some recursive validation is needed/better
+      for (let i = 0; i <= times + 10; i++) {
+        if (await this.isDisabled(loadMore)) return
         await loadMore?.click()
         await sleep(500)
       }
@@ -143,26 +127,33 @@ export class NovaJob {
     }
   }
 
-  async extract(elements: ElementHandle<Element>[]): Promise<unknown[]> {
-    const songs: Array<unknown> = []
-    for (let element of elements) {
-      const hour = await element.$eval('.time', (el) => el.textContent)
-      const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
-      const spotify = platforms.map((platform) => (platform.includes('spotify') ? platform : null)).filter(Boolean)[0]
-      const song = { hour, spotify }
-      songs.push(song)
-    }
-    return songs
+  async isDisabled(element: ElementHandle<Element> | null): Promise<boolean> {
+    const style = await element?.evaluate((a) => a.getAttribute('style'))
+    return style && style === 'display: none;' ? true : false
   }
 
-  async updateDate(date: number): Promise<void> {
-    const newDate = formatDate(date)
-    const { success, failure } = this.logger.action('redis_update_date', { newDate })
+  async reset(element: ElementHandle<Element> | null): Promise<void> {
+    await element?.evaluate((a) => a.setAttribute('style', 'inherit'))
+  }
+
+  async extract(elements: ElementHandle<Element>[]): Promise<INovaSong[]> {
+    const { success, failure } = this.logger.action('nova_extract')
+    const songs: INovaSong[] = []
     try {
-      await setLastUpdateDate(date)
-      success()
+      for (let element of elements) {
+        const hour = await element.$eval('.time', (el) => el.textContent)
+        const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
+        const spotify = platforms.map((plat) => (plat.includes('spotify') ? plat : null)).filter(Boolean)[0]
+        if (hour && spotify) {
+          const song = { hour, spotify }
+          songs.push(song)
+        }
+      }
+      success({ nbItems: songs.length })
+      return songs
     } catch (error) {
       failure(error)
+      return []
     }
   }
 }

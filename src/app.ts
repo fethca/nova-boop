@@ -23,7 +23,7 @@ export class App {
   }
 
   private async connectSpotify() {
-    const { success, failure } = this.logger.action('connect_spotify')
+    const { success, failure } = this.logger.action('spotify_connect')
     try {
       await spotifyService
         .clientCredentialsGrant()
