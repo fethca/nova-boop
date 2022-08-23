@@ -1,4 +1,7 @@
-export type INovaSong = {
+export interface ISong {
+  spotifyId: string
+}
+
+export interface INovaSong extends ISong {
   hour: string
-  spotify: string
 }

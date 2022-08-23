@@ -143,9 +143,11 @@ export class NovaJob {
       for (let element of elements) {
         const hour = await element.$eval('.time', (el) => el.textContent)
         const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
-        const spotify = platforms.map((plat) => (plat.includes('spotify') ? plat : null)).filter(Boolean)[0]
-        if (hour && spotify) {
-          const song = { hour, spotify }
+        const spotifyId = platforms
+          .map((plat) => (plat.includes('spotify') ? this.getSpotifyId(plat) : null))
+          .filter(Boolean)[0]
+        if (hour && spotifyId) {
+          const song = { hour, spotifyId }
           songs.push(song)
         }
       }
@@ -155,5 +157,12 @@ export class NovaJob {
       failure(error)
       return []
     }
+  }
+
+  private getSpotifyId(url: string): string {
+    const match = url.split('track/')
+    let result: string = ''
+    if (match && match[1]) result = match[1]
+    return result
   }
 }
