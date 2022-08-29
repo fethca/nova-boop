@@ -7,11 +7,12 @@ import moment, { Moment } from 'moment'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 
 const avgSongsPerHour = 15
+const wrongIds = ['4LRPiXqCikLlN15c3yImP7'] //Nova website has wrong linked ids. WTF
 
 export class NovaJob {
   puppeteerService = new PuppeteerManager(this.logger.child())
 
-  constructor(private logger: ILogger<Message>) {}
+  constructor(private logger: ILogger<Message>) { }
 
   async run(from: Moment): Promise<INovaSong[]> {
     const { success, failure } = this.logger.action('nova_fetch_items')
@@ -40,7 +41,7 @@ export class NovaJob {
       const firstDay = await this.firstDay(page, from)
       const nextDays = await this.nextDays(page, from, diff)
 
-      const songs = [...firstDay, ...nextDays]
+      const songs = this.filter([...firstDay, ...nextDays])
       success({ nbSongs: songs.length })
       return songs
     } catch (error) {
@@ -138,7 +139,7 @@ export class NovaJob {
 
   async extract(elements: ElementHandle<Element>[]): Promise<INovaSong[]> {
     const { success, failure } = this.logger.action('nova_extract')
-    const songs: INovaSong[] = []
+    let songs: INovaSong[] = []
     try {
       for (let element of elements) {
         const hour = await element.$eval('.time', (el) => el.textContent)
@@ -146,9 +147,9 @@ export class NovaJob {
         const spotifyId = platforms
           .map((plat) => (plat.includes('spotify') ? this.getSpotifyId(plat) : null))
           .filter(Boolean)[0]
-        if (hour && spotifyId) {
+        if (hour && spotifyId && !wrongIds.includes(spotifyId)) {
           const song = { hour, spotifyId }
-          songs.push(song)
+          songs = this.deduplicate(song, songs)
         }
       }
       success({ nbItems: songs.length })
@@ -163,6 +164,23 @@ export class NovaJob {
     const match = url.split('track/')
     let result: string = ''
     if (match && match[1]) result = match[1]
+    return result
+  }
+
+  private deduplicate(song: INovaSong, songs: INovaSong[]): INovaSong[] {
+    const index = songs.findIndex((element) => element.spotifyId === song.spotifyId)
+    if (index && index > -1) {
+      songs.splice(index, 1)
+    }
+    songs.push(song)
+    return songs
+  }
+
+  private filter(songs: INovaSong[]): INovaSong[] {
+    let result: INovaSong[] = []
+    for (const song of songs) {
+      result = this.deduplicate(song, songs)
+    }
     return result
   }
 }

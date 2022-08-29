@@ -4,7 +4,7 @@ import { spotifyService } from '@src/services/spotify'
 import { Message, settings } from '@src/settings'
 
 export class SpotifyJob {
-  constructor(private logger: ILogger<Message>) {}
+  constructor(private logger: ILogger<Message>) { }
   async run(songs: INovaSong[]) {
     const { success, failure } = this.logger.action('spotify_handle_songs')
     try {
@@ -52,6 +52,7 @@ export class SpotifyJob {
   private async uploadSongs(songs: INovaSong[], playlist: ISong[]) {
     const { success, failure } = this.logger.action('spotify_upload_songs')
     for (const song of songs) {
+
     }
   }
 }
