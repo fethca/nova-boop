@@ -1,6 +1,5 @@
 import { click, sleep } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
-import { INovaSong } from '@src/models'
 import { PuppeteerManager } from '@src/modules/puppeteer'
 import { Message } from '@src/settings'
 import moment, { Moment } from 'moment'
@@ -12,9 +11,9 @@ const wrongIds = ['4LRPiXqCikLlN15c3yImP7'] //Nova website has wrong linked ids.
 export class NovaJob {
   puppeteerService = new PuppeteerManager(this.logger.child())
 
-  constructor(private logger: ILogger<Message>) { }
+  constructor(private logger: ILogger<Message>) {}
 
-  async run(from: Moment): Promise<INovaSong[]> {
+  async run(from: Moment): Promise<string[]> {
     const { success, failure } = this.logger.action('nova_fetch_items')
     try {
       const songs = await this.scrappe(from)
@@ -26,7 +25,7 @@ export class NovaJob {
     }
   }
 
-  async scrappe(from: Moment): Promise<INovaSong[]> {
+  async scrappe(from: Moment): Promise<string[]> {
     const { success, failure } = this.logger.action('nova_scrapping')
     const browser: Browser = await this.puppeteerService.runBrowser()
 
@@ -57,14 +56,14 @@ export class NovaJob {
     return nowDate.diff(fromDate, 'days')
   }
 
-  async firstDay(page: Page, from: Moment): Promise<INovaSong[]> {
+  async firstDay(page: Page, from: Moment): Promise<string[]> {
     const fromDate = from.format('MM/DD/YYYY')
     const firstDay = await this.scrappeDay(page, fromDate, from.hour().toString(), from.minute().toString())
     return firstDay
   }
 
-  async nextDays(page: Page, from: Moment, diff: number): Promise<INovaSong[]> {
-    const result: INovaSong[] = []
+  async nextDays(page: Page, from: Moment, diff: number): Promise<string[]> {
+    const result: string[] = []
     for (let i = 1; i <= diff; i++) {
       const fromDate = from.clone().add(i, 'days').format('MM/DD/YYYY')
       const songs = await this.scrappeDay(page, fromDate)
@@ -73,7 +72,7 @@ export class NovaJob {
     return result
   }
 
-  async scrappeDay(page: Page, beginDate: string, hour: string = '23', minute: string = '59'): Promise<INovaSong[]> {
+  async scrappeDay(page: Page, beginDate: string, hour: string = '23', minute: string = '59'): Promise<string[]> {
     const { success, failure } = this.logger.action('nova_scrapping_day', { beginDate })
     try {
       const calendar = await page.$('input[name=programDate]')
@@ -137,9 +136,9 @@ export class NovaJob {
     await element?.evaluate((a) => a.setAttribute('style', 'inherit'))
   }
 
-  async extract(elements: ElementHandle<Element>[]): Promise<INovaSong[]> {
+  async extract(elements: ElementHandle<Element>[]): Promise<string[]> {
     const { success, failure } = this.logger.action('nova_extract')
-    let songs: INovaSong[] = []
+    let songs: string[] = []
     try {
       for (let element of elements) {
         const hour = await element.$eval('.time', (el) => el.textContent)
@@ -147,10 +146,7 @@ export class NovaJob {
         const spotifyId = platforms
           .map((plat) => (plat.includes('spotify') ? this.getSpotifyId(plat) : null))
           .filter(Boolean)[0]
-        if (hour && spotifyId && !wrongIds.includes(spotifyId)) {
-          const song = { hour, spotifyId }
-          songs = this.deduplicate(song, songs)
-        }
+        if (spotifyId && !wrongIds.includes(spotifyId)) songs.push(spotifyId)
       }
       success({ nbItems: songs.length })
       return songs
@@ -167,20 +163,8 @@ export class NovaJob {
     return result
   }
 
-  private deduplicate(song: INovaSong, songs: INovaSong[]): INovaSong[] {
-    const index = songs.findIndex((element) => element.spotifyId === song.spotifyId)
-    if (index && index > -1) {
-      songs.splice(index, 1)
-    }
-    songs.push(song)
-    return songs
-  }
-
-  private filter(songs: INovaSong[]): INovaSong[] {
-    let result: INovaSong[] = []
-    for (const song of songs) {
-      result = this.deduplicate(song, songs)
-    }
-    return result
+  private filter(songs: string[]): string[] {
+    const set = new Set(songs.reverse())
+    return [...set].reverse()
   }
 }

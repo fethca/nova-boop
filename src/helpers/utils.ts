@@ -9,3 +9,7 @@ export function sleep(ms) {
     setTimeout(resolve, ms)
   })
 }
+
+export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
+  return value !== null && value !== undefined
+}

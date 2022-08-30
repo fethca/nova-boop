@@ -1,11 +1,11 @@
+import { notEmpty } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
-import { INovaSong, ISong } from '@src/models'
 import { spotifyService } from '@src/services/spotify'
 import { Message, settings } from '@src/settings'
 
 export class SpotifyJob {
-  constructor(private logger: ILogger<Message>) { }
-  async run(songs: INovaSong[]) {
+  constructor(private logger: ILogger<Message>) {}
+  async run(songs: string[]) {
     const { success, failure } = this.logger.action('spotify_handle_songs')
     try {
       const playlist = await this.getPlaylist()
@@ -16,7 +16,7 @@ export class SpotifyJob {
     }
   }
 
-  private async getPlaylist(): Promise<ISong[]> {
+  private async getPlaylist(): Promise<string[]> {
     const { success, failure } = this.logger.action('spotify_get_playlist')
     try {
       const { playlist, expected } = await this.getTracksBatch()
@@ -27,10 +27,10 @@ export class SpotifyJob {
     }
   }
 
-  private async getTracksBatch<T>(): Promise<{ playlist: ISong[]; expected: number }> {
+  private async getTracksBatch<T>(): Promise<{ playlist: string[]; expected: number }> {
     let next: boolean = true
     let offset: number = 0
-    let playlist: ISong[] = []
+    let playlist: string[] = []
     let expected: number = 0
     const fields = 'total, next, limit, offset, items(track(id))'
     while (next) {
@@ -40,7 +40,7 @@ export class SpotifyJob {
         fields,
       })
       if (data.body.total) expected = data.body.total
-      if (data.body.items) playlist.push(...data.body.items.map((item) => ({ spotifyId: item?.track?.id || '' })))
+      if (data.body.items) playlist.push(...data.body.items.map((item) => item?.track?.id).filter(notEmpty))
       if (data.body.next) {
         next = true
         offset = data.body.offset + data.body.limit
@@ -49,10 +49,10 @@ export class SpotifyJob {
     return { playlist, expected }
   }
 
-  private async uploadSongs(songs: INovaSong[], playlist: ISong[]) {
+  private async uploadSongs(songs: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_songs')
     for (const song of songs) {
-
+      
     }
   }
 }
