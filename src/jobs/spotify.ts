@@ -51,8 +51,9 @@ export class SpotifyJob {
 
   private async uploadSongs(songs: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_songs')
+    let payload = ['spotify:track:6igsoAR6Co9u7Rq3U7mlOD']
     for (const song of songs) {
-      
     }
+    const up = await spotifyService.addTracksToPlaylist(settings.spotify.playlist, payload)
   }
 }

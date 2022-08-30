@@ -31,6 +31,11 @@ export class App {
         .catch((error) => {
           throw error
         })
+
+      spotifyService.setCredentials({
+        accessToken: settings.spotify.access_token,
+        refreshToken: settings.spotify.refresh_token,
+      })
       success()
     } catch (error) {
       failure(error)

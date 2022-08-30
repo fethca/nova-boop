@@ -9,6 +9,8 @@ const env = validateEnv({
   SPOTIFY_ID: str(),
   SPOTIFY_SECRET: str(),
   SPOTIFY_PLAYLIST: str(),
+  SPOTIFY_ACCESS_TOKEN: str(),
+  SPOTIFY_REFRESH_TOKEN: str(),
   REFRESH_INTERVAL: num({ default: 1000 * 60 }),
   REFRESH_OFFSET: num({ default: 1000 * 15 }),
 })
@@ -31,6 +33,8 @@ export const settings = {
     id: env.SPOTIFY_ID,
     secret: env.SPOTIFY_SECRET,
     playlist: env.SPOTIFY_PLAYLIST,
+    access_token: env.SPOTIFY_ACCESS_TOKEN,
+    refresh_token: env.SPOTIFY_REFRESH_TOKEN,
   },
   redis: {
     host: env.REDIS_HOST,
