@@ -25,17 +25,15 @@ export class App {
   private async connectSpotify() {
     const { success, failure } = this.logger.action('spotify_connect')
     try {
+      spotifyService.setRefreshToken(settings.spotify.refresh_token)
       await spotifyService
-        .clientCredentialsGrant()
-        .then((data) => spotifyService.setAccessToken(data.body['access_token']))
+        .refreshAccessToken()
+        .then((data) => {
+          spotifyService.setAccessToken(data.body['access_token'])
+        })
         .catch((error) => {
           throw error
         })
-
-      spotifyService.setCredentials({
-        accessToken: settings.spotify.access_token,
-        refreshToken: settings.spotify.refresh_token,
-      })
       success()
     } catch (error) {
       failure(error)

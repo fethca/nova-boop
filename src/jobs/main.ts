@@ -3,6 +3,7 @@ import { ILogger } from '@src/logger'
 import { redisStore } from '@src/services/redis'
 import { Message, settings } from '@src/settings'
 import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
+import { NovaJob } from './nova'
 import { SpotifyJob } from './spotify'
 
 const LAST_UPDATE_KEY = 'last-update'
@@ -17,8 +18,7 @@ export class MainJob {
     try {
       const storedDate = await getLastUpdateDate(this.logger.child())
       const from = formatDate(storedDate)
-      // const songs = await new NovaJob(this.logger.child()).run(from)
-      const songs = ['6igsoAR6Co9u7Rq3U7mlOD']
+      const songs = await new NovaJob(this.logger.child()).run(from)
       await new SpotifyJob(this.logger.child()).run(songs)
       success()
     } catch (error) {

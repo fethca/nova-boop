@@ -1,5 +1,6 @@
 import { notEmpty } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
+import { Track } from '@src/models'
 import { spotifyService } from '@src/services/spotify'
 import { Message, settings } from '@src/settings'
 
@@ -51,9 +52,28 @@ export class SpotifyJob {
 
   private async uploadSongs(songs: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_songs')
-    let payload = ['spotify:track:6igsoAR6Co9u7Rq3U7mlOD']
-    for (const song of songs) {
+    const payload: string[] = []
+    const reorder: Track[] = []
+    try {
+      for (const song of songs) {
+        const index = playlist.indexOf(this.prefix(song))
+        if (index > -1) reorder.push({ uri: this.prefix(song) })
+        payload.push(this.prefix(song))
+      }
+      if (reorder.length) await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, reorder)
+      await spotifyService.addTracksToPlaylist(settings.spotify.playlist, payload.reverse(), { position: 0 })
+      success()
+    } catch (error) {
+      failure(error)
     }
-    const up = await spotifyService.addTracksToPlaylist(settings.spotify.playlist, payload)
+  }
+
+  private async uploadBatch() {
+    //Limit payload de 100 dans les deux cas
+    // await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, reorder) || await spotifyService.addTracksToPlaylist(settings.spotify.playlist, payload.reverse(), { position: 0 })
+  }
+
+  private prefix(id: string) {
+    return `spotify:track:${id}`
   }
 }
