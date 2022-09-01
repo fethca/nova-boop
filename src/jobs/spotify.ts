@@ -1,6 +1,6 @@
 import { notEmpty } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
-import { Track } from '@src/models'
+import { IPlaylistResponse, Track } from '@src/models'
 import { spotifyService } from '@src/services/spotify'
 import { Message, settings } from '@src/settings'
 
@@ -60,17 +60,31 @@ export class SpotifyJob {
         if (index > -1) reorder.push({ uri: this.prefix(song) })
         payload.push(this.prefix(song))
       }
-      if (reorder.length) await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, reorder)
-      await spotifyService.addTracksToPlaylist(settings.spotify.playlist, payload.reverse(), { position: 0 })
+      if (reorder.length) await this.uploadBatch(reorder, spotifyService.removeTracksFromPlaylist)
+      await this.uploadBatch(payload.reverse(), spotifyService.addTracksToPlaylist, { position: 0 })
       success()
     } catch (error) {
       failure(error)
     }
   }
 
-  private async uploadBatch() {
+  private async uploadBatch(
+    payload: string[] | Track[],
+    uploadFn: (id: string, payload: string[] | Track[], opt?: { position: number }) => Promise<IPlaylistResponse>,
+    opts?: { position: number }
+  ) {
     //Limit payload de 100 dans les deux cas
     // await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, reorder) || await spotifyService.addTracksToPlaylist(settings.spotify.playlist, payload.reverse(), { position: 0 })
+    const { success, failure } = this.logger.action('spotify_upload_batch')
+    try {
+      while (payload.length) {
+        const batch = payload.slice(0, 99)
+        const result = await uploadFn(settings.spotify.playlist, batch, opts)
+        payload.splice(0, 99)
+      }
+    } catch (error) {
+      failure(error)
+    }
   }
 
   private prefix(id: string) {

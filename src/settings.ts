@@ -64,6 +64,7 @@ const messages = [
   'spotify_handle_songs',
   'spotify_get_playlist',
   'spotify_upload_songs',
+  'spotify_upload_batch',
 ] as const
 
 export type Message = typeof messages[number]
