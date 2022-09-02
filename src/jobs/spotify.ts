@@ -56,12 +56,22 @@ export class SpotifyJob {
     const reorder: Track[] = []
     try {
       for (const song of songs) {
-        const index = playlist.indexOf(this.prefix(song))
+        const index = playlist.indexOf(song)
         if (index > -1) reorder.push({ uri: this.prefix(song) })
         payload.push(this.prefix(song))
       }
-      if (reorder.length) await this.uploadBatch(reorder, spotifyService.removeTracksFromPlaylist)
-      await this.uploadBatch(payload.reverse(), spotifyService.addTracksToPlaylist, { position: 0 })
+      if (reorder.length) {
+        while (reorder.length) {
+          const batch = reorder.slice(0, 99)
+          await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, batch)
+          reorder.splice(0, 99)
+        }
+      }
+      while (payload.length) {
+        const batch = payload.slice(0, 99)
+        await spotifyService.addTracksToPlaylist(settings.spotify.playlist, batch.reverse(), { position: 0 })
+        payload.splice(0, 99)
+      }
       success()
     } catch (error) {
       failure(error)
@@ -73,8 +83,6 @@ export class SpotifyJob {
     uploadFn: (id: string, payload: string[] | Track[], opt?: { position: number }) => Promise<IPlaylistResponse>,
     opts?: { position: number }
   ) {
-    //Limit payload de 100 dans les deux cas
-    // await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, reorder) || await spotifyService.addTracksToPlaylist(settings.spotify.playlist, payload.reverse(), { position: 0 })
     const { success, failure } = this.logger.action('spotify_upload_batch')
     try {
       while (payload.length) {

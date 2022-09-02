@@ -66,6 +66,7 @@ export class NovaJob {
     const result: string[] = []
     for (let i = 1; i <= diff; i++) {
       const fromDate = from.clone().add(i, 'days').format('MM/DD/YYYY')
+      if (i === diff) console.log('Here')
       const songs = await this.scrappeDay(page, fromDate)
       if (songs) result.push(...songs)
     }
@@ -146,7 +147,7 @@ export class NovaJob {
         const spotifyId = platforms
           .map((plat) => (plat.includes('spotify') ? this.getSpotifyId(plat) : null))
           .filter(Boolean)[0]
-        if (spotifyId && !wrongIds.includes(spotifyId)) songs.push(spotifyId)
+        if (spotifyId && !wrongIds.includes(spotifyId)) songs.unshift(spotifyId)
       }
       success({ nbItems: songs.length })
       return songs
