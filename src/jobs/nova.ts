@@ -1,6 +1,7 @@
 import { click, sleep } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
 import { PuppeteerManager } from '@src/modules/puppeteer'
+import { redisStore } from '@src/services/redis'
 import { Message } from '@src/settings'
 import moment, { Moment } from 'moment'
 import { Browser, ElementHandle, Page } from 'puppeteer'
@@ -152,9 +153,10 @@ export class NovaJob {
     const { success, failure } = this.logger.action('nova_extract')
     let songs: string[] = []
     try {
-      for (let element of elements) {
+      for (const [index, element] of elements.entries()) {
         const hour = await element.$eval('.time', (el) => el.textContent)
-        if (hour && hour < toHour) break
+        if (index === 0 && hour) redisStore.tempDate = hour
+        if (element) if (hour && hour < toHour) break
         const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
         const spotifyId = platforms
           .map((plat) => (plat.includes('spotify') ? this.getSpotifyId(plat) : null))

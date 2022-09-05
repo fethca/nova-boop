@@ -50,7 +50,7 @@ const messages = [
   'nova_load_more',
   'nova_scrapping_day',
   'nova_scrapping',
-  'process_item',
+  'process_items',
   'puppeteer_browser_disconnected',
   'puppeteer_create_page',
   'puppeteer_run_browser',

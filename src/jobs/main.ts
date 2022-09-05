@@ -1,7 +1,6 @@
 import { formatDate } from '@src/helpers/formatDate'
 import { ILogger } from '@src/logger'
-import { redisStore } from '@src/services/redis'
-import { Message, settings } from '@src/settings'
+import { Message } from '@src/settings'
 import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
 import { NovaJob } from './nova'
 import { SpotifyJob } from './spotify'
@@ -12,42 +11,18 @@ export class MainJob {
   constructor(private logger: ILogger<Message>) {}
 
   async run(): Promise<void> {
-    const to = Date.now() - settings.refresh.offset
-    const from = await this.getLastUpdateDate()
-    const { success, failure } = this.logger.action('process_item')
+    const { success, failure } = this.logger.action('process_items')
     try {
       const storedDate = await getLastUpdateDate(this.logger.child())
-      const from = formatDate(storedDate)
+      const from = formatDate(storedDate).utcOffset('+02:00')
       const songs = await new NovaJob(this.logger.child()).run(from)
       await new SpotifyJob(this.logger.child()).run(songs)
       success()
+      setTimeout(this.run, 1800000)
     } catch (error) {
       failure({ error })
       throw error
     }
-  }
-
-  private async getLastUpdateDate(): Promise<number> {
-    let date = Number(await redisStore.get(LAST_UPDATE_KEY))
-    if (!date) {
-      date = Date.now()
-      await this.setLastUpdateDate(date)
-      this.logger.info('redis_no_date_found')
-      return date
-    }
-
-    const inMemoryDate = Number(await redisStore.localInstance.get(LAST_UPDATE_KEY))
-    if (inMemoryDate && inMemoryDate > date) {
-      date = inMemoryDate
-      this.logger.info('redis_resetting_server_date')
-      await this.setLastUpdateDate(inMemoryDate)
-      redisStore.localInstance.del(LAST_UPDATE_KEY)
-    }
-    return date
-  }
-
-  private async setLastUpdateDate(timestamp: number): Promise<void> {
-    return redisStore.set(LAST_UPDATE_KEY, timestamp.toString())
   }
 
   async updateDate(date: number): Promise<void> {

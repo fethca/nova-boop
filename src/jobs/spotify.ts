@@ -1,8 +1,11 @@
 import { notEmpty } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
 import { IPlaylistResponse, Track } from '@src/models'
+import { redisStore } from '@src/services/redis'
 import { spotifyService } from '@src/services/spotify'
 import { Message, settings } from '@src/settings'
+import { setLastUpdateDate } from '@src/store'
+import moment from 'moment'
 
 export class SpotifyJob {
   constructor(private logger: ILogger<Message>) {}
@@ -11,6 +14,8 @@ export class SpotifyJob {
     try {
       const playlist = await this.getPlaylist()
       await this.uploadSongs(songs, playlist)
+      const updateDate = moment(`${moment().format('YYYY-MM-DD')}T${redisStore.tempDate}:00+02:00`).valueOf()
+      await setLastUpdateDate(updateDate)
       success()
     } catch (error) {
       failure(error)

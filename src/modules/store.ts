@@ -4,6 +4,7 @@ import RedisLocal from 'ioredis-mock'
 export class Store {
   localInstance: Redis
   redisInstance?: Redis
+  tempDate: string = ''
 
   constructor() {
     this.localInstance = new RedisLocal()
