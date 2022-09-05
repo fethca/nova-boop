@@ -58,7 +58,8 @@ export class NovaJob {
 
   async firstDay(page: Page, from: Moment): Promise<string[]> {
     const fromDate = from.format('MM/DD/YYYY')
-    const firstDay = await this.scrappeDay(page, fromDate, from.hour().toString(), from.minute().toString())
+    const toHour = from.format('HH:MM')
+    const firstDay = await this.scrappeDay(page, fromDate, toHour)
     return firstDay
   }
 
@@ -73,7 +74,7 @@ export class NovaJob {
     return result
   }
 
-  async scrappeDay(page: Page, beginDate: string, hour: string = '23', minute: string = '59'): Promise<string[]> {
+  async scrappeDay(page: Page, beginDate: string, toHour: string = '00:00'): Promise<string[]> {
     const { success, failure } = this.logger.action('nova_scrapping_day', { beginDate })
     try {
       const calendar = await page.$('input[name=programDate]')
@@ -83,22 +84,33 @@ export class NovaJob {
       const selects = await page.$$('.ui-timepicker-select')
 
       const hourInput = selects[0]
-      await hourInput?.select(hour)
+      await hourInput?.select('23')
 
       const minuteInput = selects[1]
-      await minuteInput?.select(minute)
+      await minuteInput?.select('59')
 
       const filtrer = await page.waitForXPath("//*[contains(text(), 'Filtrer')]")
       await filtrer?.evaluate(click)
 
-      const times = this.calculateLoad(parseInt(hour))
+      const fromHour = moment(beginDate, 'MM/DD').isSame(new Date(), 'day') ? new Date().getHours() + 1 : 24
+      const times = this.calculateLoad(parseInt(toHour.slice(0, 2)), fromHour)
 
       await this.loadMore(page, times)
       await sleep(500)
 
       const songsBlock = await page.$('#js-programs-list')
       const songs = await songsBlock?.$$('.wwtt_right')
-      const result = songs ? await this.extract(songs) : []
+
+      let result: string[] = []
+      if (songs) {
+        for (let i = 0; i < 3; i++) {
+          //for loop instead of while to avoid infinite loop
+          const allSongs = await this.validateDisplay(songs, toHour)
+          if (allSongs) break
+          this.loadMore(page, 1)
+        }
+        result = await this.extract(songs, toHour)
+      }
       success({ results: result.length })
       return result
     } catch (error) {
@@ -107,8 +119,8 @@ export class NovaJob {
     }
   }
 
-  calculateLoad(hour: number) {
-    return Math.ceil(((hour + 1) * avgSongsPerHour) / 10) //#load_more displays 10 more songs
+  calculateLoad(toHour: number, fromHour: number = 24) {
+    return Math.ceil(((fromHour - toHour - 1) * avgSongsPerHour) / 10) //#load_more displays 10 more songs
   }
 
   async loadMore(page: Page, times: number = 10) {
@@ -116,8 +128,7 @@ export class NovaJob {
     try {
       const loadMore = await page.$('#load_more')
       if (await this.isDisabled(loadMore)) await this.reset(loadMore) //reset style to ensure it's clickable at first
-      //+10 to ensure reaching limit for now, we'll see if some recursive validation is needed/better
-      for (let i = 0; i <= times + 10; i++) {
+      for (let i = 0; i <= times; i++) {
         if (await this.isDisabled(loadMore)) return
         await loadMore?.click()
         await sleep(500)
@@ -137,12 +148,13 @@ export class NovaJob {
     await element?.evaluate((a) => a.setAttribute('style', 'inherit'))
   }
 
-  async extract(elements: ElementHandle<Element>[]): Promise<string[]> {
+  async extract(elements: ElementHandle<Element>[], toHour: string): Promise<string[]> {
     const { success, failure } = this.logger.action('nova_extract')
     let songs: string[] = []
     try {
       for (let element of elements) {
         const hour = await element.$eval('.time', (el) => el.textContent)
+        if (hour && hour < toHour) break
         const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
         const spotifyId = platforms
           .map((plat) => (plat.includes('spotify') ? this.getSpotifyId(plat) : null))
@@ -154,6 +166,15 @@ export class NovaJob {
     } catch (error) {
       failure(error)
       return []
+    }
+  }
+
+  async validateDisplay(elements: ElementHandle<Element>[], toHour: string): Promise<boolean> {
+    try {
+      const hour = await elements[elements.length - 1].$eval('.time', (el) => el.textContent)
+      return hour ? hour <= toHour : false
+    } catch (error) {
+      throw error
     }
   }
 
