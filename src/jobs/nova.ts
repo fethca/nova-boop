@@ -42,6 +42,7 @@ export class NovaJob {
       const nextDays = await this.nextDays(page, from, diff)
 
       const songs = this.filter([...firstDay, ...nextDays])
+      await this.puppeteerService.release(browser)
       success({ nbSongs: songs.length })
       return songs
     } catch (error) {
@@ -59,7 +60,7 @@ export class NovaJob {
 
   async firstDay(page: Page, from: Moment): Promise<string[]> {
     const fromDate = from.format('MM/DD/YYYY')
-    const toHour = from.format('HH:MM')
+    const toHour = from.format('HH:mm')
     const firstDay = await this.scrappeDay(page, fromDate, toHour)
     return firstDay
   }

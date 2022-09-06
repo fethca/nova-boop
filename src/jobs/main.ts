@@ -1,7 +1,7 @@
 import { formatDate } from '@src/helpers/formatDate'
 import { ILogger } from '@src/logger'
 import { Message } from '@src/settings'
-import { getLastUpdateDate, setLastUpdateDate } from '@src/store'
+import { getLastUpdateDate } from '@src/store'
 import { NovaJob } from './nova'
 import { SpotifyJob } from './spotify'
 
@@ -17,22 +17,11 @@ export class MainJob {
       const from = formatDate(storedDate).utcOffset('+02:00')
       const songs = await new NovaJob(this.logger.child()).run(from)
       await new SpotifyJob(this.logger.child()).run(songs)
+      setTimeout(this.run.bind(this), 1800000)
       success()
-      setTimeout(this.run, 1800000)
     } catch (error) {
       failure({ error })
       throw error
-    }
-  }
-
-  async updateDate(date: number): Promise<void> {
-    const newDate = formatDate(date)
-    const { success, failure } = this.logger.action('redis_update_date', { newDate })
-    try {
-      await setLastUpdateDate(date)
-      success()
-    } catch (error) {
-      failure(error)
     }
   }
 }

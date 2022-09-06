@@ -12,10 +12,29 @@ export class SpotifyJob {
   async run(songs: string[]) {
     const { success, failure } = this.logger.action('spotify_handle_songs')
     try {
+      await this.connectSpotify()
       const playlist = await this.getPlaylist()
       await this.uploadSongs(songs, playlist)
       const updateDate = moment(`${moment().format('YYYY-MM-DD')}T${redisStore.tempDate}:00+02:00`).valueOf()
       await setLastUpdateDate(updateDate)
+      success()
+    } catch (error) {
+      failure(error)
+    }
+  }
+
+  private async connectSpotify() {
+    const { success, failure } = this.logger.action('spotify_connect')
+    try {
+      spotifyService.setRefreshToken(settings.spotify.refresh_token)
+      await spotifyService
+        .refreshAccessToken()
+        .then((data) => {
+          spotifyService.setAccessToken(data.body['access_token'])
+        })
+        .catch((error) => {
+          throw error
+        })
       success()
     } catch (error) {
       failure(error)
@@ -65,6 +84,7 @@ export class SpotifyJob {
         if (index > -1) reorder.push({ uri: this.prefix(song) })
         payload.push(this.prefix(song))
       }
+      this.logger.addMeta({ reorder: reorder.length, upload: payload.length })
       if (reorder.length) {
         while (reorder.length) {
           const batch = reorder.slice(0, 99)
