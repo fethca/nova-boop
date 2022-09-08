@@ -5,8 +5,6 @@ import { getLastUpdateDate } from '@src/store'
 import { NovaJob } from './nova'
 import { SpotifyJob } from './spotify'
 
-const LAST_UPDATE_KEY = 'last-update'
-
 export class MainJob {
   constructor(private logger: ILogger<Message>) {}
 

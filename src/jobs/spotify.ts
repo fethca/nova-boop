@@ -1,6 +1,6 @@
 import { notEmpty } from '@src/helpers/utils'
 import { ILogger } from '@src/logger'
-import { IPlaylistResponse, Track } from '@src/models'
+import { Response, Track } from '@src/models'
 import { redisStore } from '@src/services/redis'
 import { spotifyService } from '@src/services/spotify'
 import { Message, settings } from '@src/settings'
@@ -76,7 +76,7 @@ export class SpotifyJob {
 
   private async uploadSongs(songs: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_songs')
-    const payload: string[] = []
+    let payload: string[] = []
     const reorder: Track[] = []
     try {
       for (const song of songs) {
@@ -84,37 +84,38 @@ export class SpotifyJob {
         if (index > -1) reorder.push({ uri: this.prefix(song) })
         payload.push(this.prefix(song))
       }
-      this.logger.addMeta({ reorder: reorder.length, upload: payload.length })
-      if (reorder.length) {
-        while (reorder.length) {
-          const batch = reorder.slice(0, 99)
-          await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, batch)
-          reorder.splice(0, 99)
-        }
+      this.logger.addMeta({ reorder: reorder.length, upload: payload.length - reorder.length })
+
+      for (let i = 0; i < reorder.length; i += 100) {
+        const batch = reorder.slice(i, i + 100)
+        await spotifyService.removeTracksFromPlaylist(settings.spotify.playlist, batch)
       }
-      while (payload.length) {
-        const batch = payload.slice(0, 99)
+      for (let i = 0; i < payload.length; i += 100) {
+        const batch = payload.slice(i, i + 100)
         await spotifyService.addTracksToPlaylist(settings.spotify.playlist, batch.reverse(), { position: 0 })
-        payload.splice(0, 99)
       }
+
+      //WIP token errors
+      // await this.uploadBatch(reorder, spotifyService.removeTracksFromPlaylist)
+      // await this.uploadBatch(payload, spotifyService.addTracksToPlaylist, { position: 0 })
       success()
     } catch (error) {
       failure(error)
     }
   }
 
-  private async uploadBatch(
-    payload: string[] | Track[],
-    uploadFn: (id: string, payload: string[] | Track[], opt?: { position: number }) => Promise<IPlaylistResponse>,
-    opts?: { position: number }
+  private async uploadBatch<P, O, R extends SpotifyApi.PlaylistSnapshotResponse>(
+    payload: P[],
+    uploadFn: (id: string, payload: P[], opt?: O) => Promise<Response<R>>,
+    opts?: O
   ) {
     const { success, failure } = this.logger.action('spotify_upload_batch')
     try {
-      while (payload.length) {
-        const batch = payload.slice(0, 99)
-        const result = await uploadFn(settings.spotify.playlist, batch, opts)
-        payload.splice(0, 99)
+      for (let i = 0; i < payload.length; i += 100) {
+        const batch = payload.slice(i, i + 100)
+        await uploadFn(settings.spotify.playlist, batch, opts)
       }
+      success()
     } catch (error) {
       failure(error)
     }

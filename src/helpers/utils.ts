@@ -13,7 +13,3 @@ export function sleep(ms) {
 export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
   return value !== null && value !== undefined
 }
-
-// const isFruit = (x: any): x is Fruit => fruit.includes(x)
-
-// export const isTrackArray = (value: unknown): value is Track => {}

@@ -3,16 +3,8 @@ export interface Track {
   uri: string
 }
 
-interface Response<T> {
+export interface Response<T> {
   body: T
   headers: Record<string, string>
   statusCode: number
 }
-
-interface PlaylistSnapshotResponse {
-  snapshot_id: string
-}
-
-export type IPlaylistResponse =
-  | Promise<Response<SpotifyApi.RemoveTracksFromPlaylistResponse>>
-  | Promise<Response<SpotifyApi.AddTracksToPlaylistResponse>>
