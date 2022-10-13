@@ -67,7 +67,7 @@ export class PuppeteerManager {
     const { success, failure } = this.logger.action('puppeteer_run_browser')
     try {
       const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         devtools: false,
         ignoreHTTPSErrors: true,
         slowMo: 0,

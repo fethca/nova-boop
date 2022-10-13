@@ -7,7 +7,8 @@ import moment, { Moment } from 'moment'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 
 const avgSongsPerHour = 15
-const wrongIds = ['4LRPiXqCikLlN15c3yImP7'] //Nova website has wrong linked ids. WTF
+const wrongIds = ['4LRPiXqCikLlN15c3yImP7'] //Nova website set this id to unknown id songs. WTF
+const replaceIds = { '1julw87xjTSzLLqAv8aNab': '5vmRQ3zELMLUQPo2FLQ76x' } //Nova website linked wrong ids
 
 export class NovaJob {
   puppeteerService = new PuppeteerManager(this.logger.child())
@@ -185,6 +186,12 @@ export class NovaJob {
     const match = url.split('track/')
     let result: string = ''
     if (match && match[1]) result = match[1]
+    return this.fixId(result)
+  }
+
+  private fixId(spotifyId: string): string {
+    let result = spotifyId
+    if (Object.keys(replaceIds).includes(spotifyId)) result = replaceIds[spotifyId]
     return result
   }
 
