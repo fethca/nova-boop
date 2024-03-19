@@ -4,3 +4,4 @@ logs/
 dist
 .env
 coverage
+./cache

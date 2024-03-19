@@ -1,11 +1,14 @@
+import { extractPackageJson } from '@fethcat/shared'
+import { logsValidators, redisValidators, validateEnv } from '@fethcat/validator'
 import { randomBytes } from 'crypto'
 import { num, str } from 'envalid'
-import { name, version } from '../package.json'
-import { logsValidators, redisValidators, validateEnv } from './modules/envalid'
+
+const { name, version } = extractPackageJson()
 
 const env = validateEnv({
   ...logsValidators,
   ...redisValidators,
+  PORT: num({ default: 3000 }),
   SPOTIFY_ID: str(),
   SPOTIFY_SECRET: str(),
   SPOTIFY_PLAYLIST: str(),
@@ -18,15 +21,9 @@ const instanceId = randomBytes(16).toString('hex')
 
 export const settings = {
   instanceId,
-  app: { name, version },
+  metadata: { app: name, version, port: env.PORT, env: env.APP_STAGE },
   logs: {
-    common: {
-      app: name,
-      file: name,
-      colorize: env.LOG_COLORIZE,
-      silent: env.LOG_SILENT,
-      format: env.LOG_FORMAT,
-    },
+    silent: env.LOG_SILENT,
   },
   spotify: {
     id: env.SPOTIFY_ID,
@@ -45,26 +42,30 @@ export const settings = {
 }
 
 const messages = [
+  'main_job',
   'nova_extract',
   'nova_fetch_items',
   'nova_load_more',
-  'nova_scrapping_day',
   'nova_scrapping',
+  'nova_scrapping_day',
   'process_items',
   'puppeteer_browser_disconnected',
   'puppeteer_create_page',
   'puppeteer_run_browser',
   'puppeteer_stop_browser',
+  'redis_init_store',
   'redis_no_date_found',
   'redis_no_date_found_using_now',
   'redis_resetting_server_date',
   'redis_resetting_server_date',
   'redis_update_date',
   'spotify_connect',
-  'spotify_handle_songs',
   'spotify_get_playlist',
-  'spotify_upload_songs',
+  'spotify_handle_songs',
   'spotify_upload_batch',
+  'spotify_upload_songs',
+  'spotify_search_song',
+  'spotify_match_track_score',
 ] as const
 
-export type Message = typeof messages[number]
+export type Message = (typeof messages)[number]

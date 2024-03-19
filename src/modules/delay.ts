@@ -1,4 +1,4 @@
-import { EventEmitter } from 'stream'
+import { EventEmitter } from 'node:stream'
 
 export interface IDelayQueue<T> {
   processMessages(referenceDate: number): Promise<void>

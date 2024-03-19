@@ -1,4 +1,4 @@
-import { Axios } from './axios'
+import { Axios } from './axios.js'
 
 const uri = 'https://api.deezer.com'
 

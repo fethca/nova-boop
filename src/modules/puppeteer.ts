@@ -1,17 +1,20 @@
-import { ILogger } from '@src/logger'
-import { Message } from '@src/settings'
+import { ILogger, Logger } from '@fethcat/logger'
 import { Browser, DEFAULT_INTERCEPT_RESOLUTION_PRIORITY, Page } from 'puppeteer'
 import puppeteer from 'puppeteer-extra'
-import BlockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import randomUseragent from 'random-useragent'
+import { Message, settings } from '../settings.js'
+
+import blockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
+
+const { instanceId, logs, metadata } = settings
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36'
 
-puppeteer
+puppeteer.default
   .use(
-    BlockResourcesPlugin({
+    blockResourcesPlugin({
       blockedTypes: new Set([
         'stylesheet',
         'image',
@@ -24,15 +27,14 @@ puppeteer
         'manifest',
       ]),
       interceptResolutionPriority: DEFAULT_INTERCEPT_RESOLUTION_PRIORITY,
-    })
+    }),
   )
   .use(StealthPlugin())
 
 export class PuppeteerManager {
+  protected logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
   private isReleased = false
   private retries = 0
-
-  constructor(private logger: ILogger<Message>) {}
 
   private async init() {
     this.isReleased = false
@@ -66,8 +68,8 @@ export class PuppeteerManager {
   public async runBrowser(): Promise<Browser> {
     const { success, failure } = this.logger.action('puppeteer_run_browser')
     try {
-      const browser = await puppeteer.launch({
-        headless: true,
+      const browser = await puppeteer.default.launch({
+        headless: false,
         devtools: false,
         ignoreHTTPSErrors: true,
         slowMo: 0,

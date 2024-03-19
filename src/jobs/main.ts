@@ -1,21 +1,26 @@
-import { formatDate } from '@src/helpers/formatDate'
-import { ILogger } from '@src/logger'
-import { Message } from '@src/settings'
-import { getLastUpdateDate } from '@src/store'
-import { NovaJob } from './nova'
-import { SpotifyJob } from './spotify'
+import { ILogger, Logger } from '@fethcat/logger'
+import { formatDate } from '../helpers/utils.js'
+import { getLastUpdateDate, getTempDate, setLastUpdateDate } from '../services/redis.js'
+import { Message, settings } from '../settings.js'
+import { NovaJob } from './nova.js'
+import { SpotifyJob } from './spotify.js'
+
+const { instanceId, logs, metadata } = settings
 
 export class MainJob {
-  constructor(private logger: ILogger<Message>) {}
+  protected logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
 
   async run(): Promise<void> {
-    const { success, failure } = this.logger.action('process_items')
+    const { success, failure } = this.logger.action('main_job')
     try {
       const storedDate = await getLastUpdateDate(this.logger.child())
       const from = formatDate(storedDate).utcOffset('+02:00')
-      const songs = await new NovaJob(this.logger.child()).run(from)
-      await new SpotifyJob(this.logger.child()).run(songs)
-      setTimeout(this.run.bind(this), 1800000)
+      const songs = await new NovaJob().run(from)
+      if (songs.length) {
+        await new SpotifyJob().run(songs)
+        await setLastUpdateDate(getTempDate())
+      }
+      setTimeout(this.run.bind(this), 1000 * 60 * 30)
       success()
     } catch (error) {
       failure({ error })

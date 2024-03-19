@@ -1,12 +1,16 @@
 {
   "name": "nova-boop",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon -r dotenv/config --inspect=8083 src/index.ts",
-    "build": "ttsc -b tsconfig.build.json"
+    "build": "tsc -b tsconfig.build.json",
+    "format": "prettier -w \"{src,tests}/**/*.{ts,tsx}\"",
+    "lint": "eslint \"{src,tests}/**/*.{ts,tsx}\"",
+    "start:dev": "nodemon -r dotenv/config --inspect=9999 src/index.ts",
+    "version:patch": "version patch",
+    "version:minor": "version minor",
+    "version:major": "version major"
   },
   "repository": {
     "type": "git",
@@ -19,38 +23,61 @@
   },
   "homepage": "https://github.com/fethca/nova-boop#readme",
   "dependencies": {
-    "@types/jest": "^28.1.3",
-    "@types/jsdom": "^20.0.0",
-    "@types/node": "^13.5.2",
-    "@types/random-useragent": "^0.3.1",
-    "@types/spotify-web-api-node": "^5.0.7",
-    "axios": "^0.27.2",
-    "dotenv": "^16.0.1",
-    "envalid": "^7.3.1",
-    "eslint": "^8.15.0",
-    "ioredis": "4.27.2",
-    "ioredis-mock": "5.5.5",
-    "jest": "^28.1.1",
-    "jsdom": "^20.0.0",
-    "moment": "^2.29.3",
-    "nodemon": "^2.0.16",
-    "prettier": "^2.6.2",
-    "puppeteer": "^15.4.0",
-    "puppeteer-extra": "^3.3.4",
-    "puppeteer-extra-plugin-block-resources": "^2.4.2",
-    "puppeteer-extra-plugin-recaptcha": "^3.6.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.0",
+    "@fethcat/logger": "^1.0.0",
+    "@fethcat/shared": "^0.0.3",
+    "@fethcat/store": "^0.0.1",
+    "@fethcat/validator": "^0.0.3",
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
+    "fuse.js": "^7.0.0",
+    "htmlparser2": "^9.1.0",
+    "ioredis": "5.3.2",
+    "latinize": "^2.0.0",
+    "lodash.isequal": "^4.5.0",
+    "lodash.uniqwith": "^4.5.0",
+    "moment": "^2.30.1",
+    "puppeteer": "^22.4.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-block-resources": "^2.4.3",
+    "puppeteer-extra-plugin-recaptcha": "^3.6.8",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "random-useragent": "^0.5.0",
-    "spotify-web-api-node": "^5.0.2",
-    "ts-jest": "^28.0.5",
-    "ts-node": "^10.8.0",
-    "ttypescript": "^1.5.13",
-    "typescript": "^4.6.4",
-    "typescript-transform-paths": "^3.3.1",
-    "winston": "^3.8.0",
-    "winston-transport": "^4.5.0"
+    "spotify-web-api-node": "^5.0.2"
   },
   "devDependencies": {
-    "@types/puppeteer": "^5.4.6"
+    "@fethcat/eslint-plugin": "^0.0.3",
+    "@fethcat/prettier-config": "^1.0.2",
+    "@fethcat/tests": "^0.0.8",
+    "@fethcat/version": "^0.0.8",
+    "@types/latinize": "^0.2.18",
+    "@types/lodash.isequal": "^4.5.8",
+    "@types/lodash.uniqwith": "^4.5.9",
+    "@types/node": "^20.3.0",
+    "@types/random-useragent": "^0.3.3",
+    "@types/spotify-web-api-node": "^5.0.11",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.2.5",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.2"
+  },
+  "prettier": "@fethcat/prettier-config",
+  "nodemonConfig": {
+    "restartable": "rs",
+    "ignore": [
+      ".git",
+      "node_modules/**/node_modules"
+    ],
+    "execMap": {
+      "ts": "tsx"
+    },
+    "watch": [
+      "src/"
+    ],
+    "ext": "js,json,ts"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:@fethcat/back"
+    ]
   }
 }

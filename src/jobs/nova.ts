@@ -1,21 +1,28 @@
-import { click, sleep } from '@src/helpers/utils'
-import { ILogger } from '@src/logger'
-import { PuppeteerManager } from '@src/modules/puppeteer'
-import { redisStore } from '@src/services/redis'
-import { Message } from '@src/settings'
+import { ILogger, Logger } from '@fethcat/logger'
+import isEqual from 'lodash.isequal'
+import uniqWith from 'lodash.uniqwith'
 import moment, { Moment } from 'moment'
 import { Browser, ElementHandle, Page } from 'puppeteer'
+import { click, findText, wait } from '../helpers/utils.js'
+import { PuppeteerManager } from '../modules/puppeteer.js'
+import { setTempDate } from '../services/redis.js'
+import { Message, settings } from '../settings.js'
+import { ITrack } from '../types.js'
+
+const { instanceId, logs, metadata } = settings
 
 const avgSongsPerHour = 15
-const wrongIds = ['4LRPiXqCikLlN15c3yImP7'] //Nova website set this id to unknown id songs. WTF
-const replaceIds = { '1julw87xjTSzLLqAv8aNab': '5vmRQ3zELMLUQPo2FLQ76x' } //Nova website linked wrong ids
+const wrongIds = ['4LRPiXqCikLlN15c3yImP7', '2N6CSu4nnTgEGlXXR9L1a1'] //Nova website set this id to unknown id songs
+const replaceIds: Record<string, string> = {
+  '1julw87xjTSzLLqAv8aNab': '5vmRQ3zELMLUQPo2FLQ76x',
+  '7IVcBBERvJG0bgZ4UZEB7R': '6kopmMZiyLmw7h66uXcXR7',
+} //Nova website linked wrong ids
 
 export class NovaJob {
-  puppeteerService = new PuppeteerManager(this.logger.child())
+  protected logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
+  puppeteerService = new PuppeteerManager()
 
-  constructor(private logger: ILogger<Message>) {}
-
-  async run(from: Moment): Promise<string[]> {
+  async run(from: Moment): Promise<ITrack[]> {
     const { success, failure } = this.logger.action('nova_fetch_items')
     try {
       const songs = await this.scrappe(from)
@@ -23,11 +30,11 @@ export class NovaJob {
       return songs
     } catch (error) {
       failure(error)
-      throw error
+      return []
     }
   }
 
-  async scrappe(from: Moment): Promise<string[]> {
+  async scrappe(from: Moment): Promise<ITrack[]> {
     const { success, failure } = this.logger.action('nova_scrapping')
     const browser: Browser = await this.puppeteerService.runBrowser()
 
@@ -37,20 +44,28 @@ export class NovaJob {
       const cookies = await page.$('#didomi-notice-agree-button')
       await cookies?.click()
 
-      const diff = this.calculateDiff(from)
-
-      const firstDay = await this.firstDay(page, from)
-      const nextDays = await this.nextDays(page, from, diff)
-
-      const songs = this.filter([...firstDay, ...nextDays])
+      const scrappe = await this.scrappeDays(page, from)
+      const songs = uniqWith(scrappe, isEqual)
       await this.puppeteerService.release(browser)
       success({ nbSongs: songs.length })
       return songs
     } catch (error) {
       await this.puppeteerService.release(browser)
-      failure(error)
-      return []
+      throw failure(error)
     }
+  }
+
+  async scrappeDays(page: Page, from: Moment): Promise<ITrack[]> {
+    const diff = this.calculateDiff(from)
+    const result: ITrack[] = []
+    for (let i = 0; i <= diff; i++) {
+      const hour = i === 0 ? from.format('HH:mm') : '00:00'
+      const fromDate = from.clone().add(i, 'days').format('MM/DD/YYYY')
+      const songs = await this.scrappeDay(page, fromDate, hour)
+      if (songs) result.unshift(...songs)
+      else break
+    }
+    return result
   }
 
   calculateDiff(from: Moment) {
@@ -59,26 +74,8 @@ export class NovaJob {
     return nowDate.diff(fromDate, 'days')
   }
 
-  async firstDay(page: Page, from: Moment): Promise<string[]> {
-    const fromDate = from.format('MM/DD/YYYY')
-    const toHour = from.format('HH:mm')
-    const firstDay = await this.scrappeDay(page, fromDate, toHour)
-    return firstDay
-  }
-
-  async nextDays(page: Page, from: Moment, diff: number): Promise<string[]> {
-    const result: string[] = []
-    for (let i = 1; i <= diff; i++) {
-      const fromDate = from.clone().add(i, 'days').format('MM/DD/YYYY')
-      if (i === diff) console.log('Here')
-      const songs = await this.scrappeDay(page, fromDate)
-      if (songs) result.push(...songs)
-    }
-    return result
-  }
-
-  async scrappeDay(page: Page, beginDate: string, toHour: string = '00:00'): Promise<string[]> {
-    const { success, failure } = this.logger.action('nova_scrapping_day', { beginDate })
+  async scrappeDay(page: Page, beginDate: string, toHour: string = '00:00'): Promise<ITrack[]> {
+    const { success, failure, skip } = this.logger.action('nova_scrapping_day', { beginDate, toHour })
     try {
       const calendar = await page.$('input[name=programDate]')
       await calendar?.focus()
@@ -92,33 +89,38 @@ export class NovaJob {
       const minuteInput = selects[1]
       await minuteInput?.select('59')
 
-      const filtrer = await page.waitForXPath("//*[contains(text(), 'Filtrer')]")
+      await page.select('select[name="radio"]', '910')
+
+      const filtrer = await page.waitForSelector(findText('Filtrer'))
       await filtrer?.evaluate(click)
 
       const fromHour = moment(beginDate, 'MM/DD').isSame(new Date(), 'day') ? new Date().getHours() + 1 : 24
       const times = this.calculateLoad(parseInt(toHour.slice(0, 2)), fromHour)
 
       await this.loadMore(page, times)
-      await sleep(500)
+      await wait(1000)
 
       const songsBlock = await page.$('#js-programs-list')
       const songs = await songsBlock?.$$('.wwtt_right')
-
-      let result: string[] = []
-      if (songs) {
-        for (let i = 0; i < 3; i++) {
-          //for loop instead of while to avoid infinite loop
-          const allSongs = await this.validateDisplay(songs, toHour)
-          if (allSongs) break
-          this.loadMore(page, 1)
-        }
-        result = await this.extract(songs, toHour)
+      if (!songs?.length) {
+        const novaDown = await page.waitForSelector(findText('Service momentanément indisponible.'))
+        if (novaDown) skip(`nova_website_down_for_this_day`)
+        else skip('no_tracks_for_this_day')
+        return []
       }
+
+      let result: ITrack[] = []
+      for (let i = 0; i < 3; i++) {
+        const allSongs = await this.validateDisplay(songs, toHour)
+        if (allSongs) break
+        this.loadMore(page, 1)
+      }
+      result = await this.extract(songs, beginDate, toHour)
+
       success({ results: result.length })
       return result
     } catch (error) {
-      failure(error)
-      return []
+      throw failure(error)
     }
   }
 
@@ -134,7 +136,10 @@ export class NovaJob {
       for (let i = 0; i <= times; i++) {
         if (await this.isDisabled(loadMore)) return
         await loadMore?.click()
-        await sleep(500)
+        //going too fast and not scrolling mess up with website capacities.
+        await wait(2000) //optimized time can vary, less than 1000 is too risky
+        await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+        await wait(2000)
       }
       success()
     } catch (error) {
@@ -151,28 +156,6 @@ export class NovaJob {
     await element?.evaluate((a) => a.setAttribute('style', 'inherit'))
   }
 
-  async extract(elements: ElementHandle<Element>[], toHour: string): Promise<string[]> {
-    const { success, failure } = this.logger.action('nova_extract')
-    let songs: string[] = []
-    try {
-      for (const [index, element] of elements.entries()) {
-        const hour = await element.$eval('.time', (el) => el.textContent)
-        if (index === 0 && hour) redisStore.tempDate = hour
-        if (element) if (hour && hour < toHour) break
-        const platforms = await element.$$eval('a', (link) => link.map((a) => a.href))
-        const spotifyId = platforms
-          .map((plat) => (plat.includes('spotify') ? this.getSpotifyId(plat) : null))
-          .filter(Boolean)[0]
-        if (spotifyId && !wrongIds.includes(spotifyId)) songs.unshift(spotifyId)
-      }
-      success({ nbItems: songs.length })
-      return songs
-    } catch (error) {
-      failure(error)
-      return []
-    }
-  }
-
   async validateDisplay(elements: ElementHandle<Element>[], toHour: string): Promise<boolean> {
     try {
       const hour = await elements[elements.length - 1].$eval('.time', (el) => el.textContent)
@@ -182,7 +165,39 @@ export class NovaJob {
     }
   }
 
-  private getSpotifyId(url: string): string {
+  async extract(elements: ElementHandle<Element>[], date: string, toHour: string): Promise<ITrack[]> {
+    const { success, failure } = this.logger.action('nova_extract')
+    let songs: ITrack[] = []
+    try {
+      for (const [index, element] of elements.entries()) {
+        const artist = (await element.$eval('h2', (el) => el.textContent)) || ''
+        const title = (await element.$eval('p:nth-of-type(2)', (el) => el.textContent)) || ''
+        const hour = await element.$eval('.time', (el) => el.textContent)
+        if (index === 0 && hour) setTempDate(date, hour)
+        if (element) if (hour && hour < toHour) break
+        const platformsElement = await element.$$eval('a', (link) => link.map((a) => a.href))
+        let platforms: { spotify?: string; deezer?: string } = {}
+        for (const element of platformsElement) {
+          const platform = this.getPlatformId(element)
+          if (platform) platforms = { ...platform, ...platforms }
+        }
+        const song = { artist, title, spotifyId: platforms.spotify, deezerId: platforms.deezer }
+        songs.push(song)
+      }
+      success({ nbItems: songs.length })
+      return songs
+    } catch (error) {
+      throw failure(error)
+    }
+  }
+
+  private getPlatformId(url: string): { spotify: string } | { deezer: string } | undefined {
+    if (url.includes('spotify')) return { spotify: this.getTrackId(url) }
+    if (url.includes('deezer')) return { deezer: this.getTrackId(url) }
+    return
+  }
+
+  private getTrackId(url: string): string {
     const match = url.split('track/')
     let result: string = ''
     if (match && match[1]) result = match[1]
@@ -192,11 +207,7 @@ export class NovaJob {
   private fixId(spotifyId: string): string {
     let result = spotifyId
     if (Object.keys(replaceIds).includes(spotifyId)) result = replaceIds[spotifyId]
+    if (wrongIds.includes(result)) result = ''
     return result
-  }
-
-  private filter(songs: string[]): string[] {
-    const set = new Set(songs.reverse())
-    return [...set].reverse()
   }
 }

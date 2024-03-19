@@ -1,44 +1,84 @@
-import { notEmpty } from '@src/helpers/utils'
-import { ILogger } from '@src/logger'
-import { Response, Track } from '@src/models'
-import { redisStore } from '@src/services/redis'
-import { spotifyService } from '@src/services/spotify'
-import { Message, settings } from '@src/settings'
-import { setLastUpdateDate } from '@src/store'
-import moment from 'moment'
+import { ILogger, Logger } from '@fethcat/logger'
+import Fuse from 'fuse.js'
+import { formatName, formatTitle, notEmpty } from '../helpers/utils.js'
+import { spotifyService } from '../services/spotify.js'
+import { Message, settings } from '../settings.js'
+import { ITrack, Response } from '../types.js'
+
+const { instanceId, logs, metadata } = settings
 
 export class SpotifyJob {
-  constructor(private logger: ILogger<Message>) {}
-  async run(songs: string[]) {
+  protected logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
+
+  async run(songs: ITrack[]) {
     const { success, failure } = this.logger.action('spotify_handle_songs')
     try {
-      await this.connectSpotify()
+      const ids: string[] = []
+      for (const song of songs) {
+        const id = await this.getId(song)
+        if (id) ids.push(id)
+      }
       const playlist = await this.getPlaylist()
-      await this.uploadSongs(songs, playlist)
-      const updateDate = moment(`${moment().format('YYYY-MM-DD')}T${redisStore.tempDate}:00+02:00`).valueOf()
-      await setLastUpdateDate(updateDate)
+      await this.uploadSongs(ids, playlist)
       success()
     } catch (error) {
       failure(error)
     }
   }
 
-  private async connectSpotify() {
-    const { success, failure } = this.logger.action('spotify_connect')
+  private async getId(song: ITrack): Promise<string | null> {
+    if (song.spotifyId) return song.spotifyId
+    const { artist, title } = song
+    return await this.searchTrack(artist, title)
+  }
+
+  private async searchTrack(artist: string, title: string): Promise<string | null> {
+    const { success, failure, skip } = this.logger.action('spotify_search_song')
     try {
-      spotifyService.setRefreshToken(settings.spotify.refresh_token)
-      await spotifyService
-        .refreshAccessToken()
-        .then((data) => {
-          spotifyService.setAccessToken(data.body['access_token'])
-        })
-        .catch((error) => {
-          throw error
-        })
+      const artists = artist.split('/')
+      const formattedTitle = formatTitle(title)
+      const options = { limit: 3 }
+      let track: SpotifyApi.TrackObjectFull | undefined
+      for (const person of artists) {
+        const queries = [
+          `track:${formattedTitle} artist:${formatName(person)}`,
+          `${formattedTitle} ${formatName(person)}`,
+        ]
+        for (const query of queries) {
+          const results = await spotifyService.searchTracks(query, options)
+          track = results.body.tracks?.items.find((track) => this.matchTrack(artist, formattedTitle, track))
+          if (track) break
+        }
+        if (track) break
+      }
+
+      if (!track) {
+        skip('spotify_no_match', { artist, title })
+        return null
+      }
+
       success()
+      return track.id
     } catch (error) {
-      failure(error)
+      throw failure(error)
     }
+  }
+
+  private matchTrack(artist: string, title: string, track: { artists: { name: string }[]; name: string }): boolean {
+    const fuseOptions = { includeScore: true, threshold: 1.0 }
+
+    const titleFuse = new Fuse([title], fuseOptions)
+    const titleScore = Number(titleFuse.search(formatTitle(track.name))[0].score)
+
+    const artists = artist.split('/').map((artist) => formatName(artist))
+    const artistsFuse = new Fuse(artists, { ...fuseOptions, useExtendedSearch: true })
+    const artistQuery = track.artists.map((person) => formatName(person.name)).join(' | ')
+    const artistScore = Number(artistsFuse.search(artistQuery)[0].score)
+
+    const metadata = { title, titleQuery: formatTitle(track.name), titleScore, artist, artistQuery, artistScore }
+    this.logger.info('spotify_match_track_score', metadata)
+
+    return titleScore < 0.4 && artistScore < 0.4
   }
 
   private async getPlaylist(): Promise<string[]> {
@@ -77,7 +117,10 @@ export class SpotifyJob {
   private async uploadSongs(songs: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_songs')
     let payload: string[] = []
-    const reorder: Track[] = []
+    const reorder: {
+      positions?: ReadonlyArray<number> | undefined
+      uri: string
+    }[] = []
     try {
       for (const song of songs) {
         const index = playlist.indexOf(song)
@@ -93,24 +136,27 @@ export class SpotifyJob {
     }
   }
 
+  private prefix(id: string) {
+    return `spotify:track:${id}`
+  }
+
   private async uploadBatch<P, O, R extends SpotifyApi.PlaylistSnapshotResponse>(
     payload: P[],
     uploadFn: (id: string, payload: P[], opt?: O) => Promise<Response<R>>,
-    opts?: O
+    opts?: O,
   ) {
     const { success, failure } = this.logger.action('spotify_upload_batch')
     try {
-      for (let i = 0; i < payload.length; i += 100) {
-        const batch = payload.slice(i, i + 100)
+      for (let i = payload.length; i >= 0; ) {
+        const end = i
+        const start = i - 100 > 0 ? i - 100 : 0
+        const batch = payload.slice(start, end)
         await uploadFn(settings.spotify.playlist, batch, opts)
+        i = start - 1
       }
       success()
     } catch (error) {
       failure(error)
     }
-  }
-
-  private prefix(id: string) {
-    return `spotify:track:${id}`
   }
 }
