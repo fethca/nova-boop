@@ -1,12 +1,13 @@
 {
   "name": "nova-boop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "format": "prettier -w \"{src,tests}/**/*.{ts,tsx}\"",
     "lint": "eslint \"{src,tests}/**/*.{ts,tsx}\"",
+    "test:unit": "vitest run --coverage",
     "start:dev": "nodemon -r dotenv/config --inspect=9999 src/index.ts",
     "version:patch": "version patch",
     "version:minor": "version minor",
@@ -47,7 +48,7 @@
   "devDependencies": {
     "@fethcat/eslint-plugin": "^0.0.3",
     "@fethcat/prettier-config": "^1.0.2",
-    "@fethcat/tests": "^0.0.8",
+    "@fethcat/tests": "^0.0.10",
     "@fethcat/version": "^0.0.8",
     "@types/latinize": "^0.2.18",
     "@types/lodash.isequal": "^4.5.8",
@@ -55,6 +56,7 @@
     "@types/node": "^20.3.0",
     "@types/random-useragent": "^0.3.3",
     "@types/spotify-web-api-node": "^5.0.11",
+    "mockdate": "^3.0.5",
     "nodemon": "^3.1.0",
     "prettier": "^3.2.5",
     "tsx": "^4.7.1",
