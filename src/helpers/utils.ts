@@ -1,5 +1,5 @@
 import latinize from 'latinize'
-import { Moment, utc } from 'moment'
+import moment, { Moment } from 'moment'
 
 export function click(element: unknown) {
   if (element instanceof HTMLElement) {
@@ -22,7 +22,7 @@ export function findText(text: string) {
 }
 
 export function formatDate(date: number): Moment {
-  return utc(date)
+  return moment.utc(date)
 }
 
 export function formatTitle(title: string): string {
