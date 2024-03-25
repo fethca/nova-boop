@@ -13,6 +13,7 @@ FROM base as source
 COPY yarn.lock ./
 COPY package.json ./
 RUN yarn install --frozen-lockfile --production=false
+COPY types ./types
 COPY src ./src
 
 #####  Dependencies stage ######
@@ -20,6 +21,15 @@ COPY src ./src
 FROM source as dependencies
 
 RUN yarn install --frozen-lockfile --force --production --ignore-scripts --prefer-offline
+
+### Test stage #####
+
+FROM source as test
+
+COPY tsconfig.json ./
+COPY vitest.config.ts ./
+COPY tests ./tests
+RUN yarn vitest run --coverage
 
 #### Build stage ####
 

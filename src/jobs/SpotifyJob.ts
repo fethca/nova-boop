@@ -96,8 +96,8 @@ export class SpotifyJob {
   private async getTracksBatch(): Promise<{ playlist: string[]; expected: number }> {
     let next: boolean = true
     let offset: number = 0
-    let playlist: string[] = []
     let expected: number = 0
+    const playlist: string[] = []
     const fields = 'total, next, limit, offset, items(track(id))'
     while (next) {
       const data = await spotifyService.getPlaylistTracks(settings.spotify.playlist, {
@@ -117,7 +117,7 @@ export class SpotifyJob {
 
   private async uploadTracks(tracks: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_tracks')
-    let payload: string[] = []
+    const payload: string[] = []
     const reorder: { positions?: ReadonlyArray<number> | undefined; uri: string }[] = []
     try {
       for (const track of tracks) {

@@ -3,7 +3,7 @@ import { Browser, DEFAULT_INTERCEPT_RESOLUTION_PRIORITY, Page } from 'puppeteer'
 import puppeteer from 'puppeteer-extra'
 import blockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import randomUseragent from 'random-useragent'
+import { getRandom } from 'random-useragent'
 import { Message, settings } from '../settings.js'
 import { IPuppeteerManager } from '../types.js'
 
@@ -85,7 +85,7 @@ export class PuppeteerManager implements IPuppeteerManager {
     const { success, failure } = this.logger.action('puppeteer_create_page')
     try {
       if (!browser) await this.init()
-      const userAgent = randomUseragent.getRandom((ua) => ua.engineName === 'Gecko') || USER_AGENT
+      const userAgent = getRandom((ua) => ua.engineName === 'Gecko') || USER_AGENT
       const page = await browser.newPage()
       await page.setViewport({
         width: 1920 + Math.floor(Math.random() * 100),
@@ -98,7 +98,7 @@ export class PuppeteerManager implements IPuppeteerManager {
 
       await page.setUserAgent(userAgent)
       await page.setJavaScriptEnabled(true)
-      await page.setDefaultNavigationTimeout(0)
+      page.setDefaultNavigationTimeout(0)
 
       await page.evaluateOnNewDocument(() => {
         Object.defineProperty(navigator, 'webdriver', { get: () => false })

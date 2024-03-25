@@ -75,7 +75,7 @@ describe('getLastUpdateDate', () => {
 
   beforeEach(() => {
     store.get = vi.fn().mockResolvedValue('2000')
-    store.localInstance.get = vi.fn().mockResolvedValue('1000')
+    store.localInstance.get = vi.fn().mockReturnValue('1000')
   })
 
   it('should get last update date', async () => {
@@ -93,7 +93,7 @@ describe('getLastUpdateDate', () => {
   })
 
   it('should reset date if redis date is older than memory date', async () => {
-    store.localInstance.get = vi.fn().mockResolvedValue('3000')
+    store.localInstance.get = vi.fn().mockReturnValue('3000')
     const job = createJob()
     await job['getLastUpdateDate']()
     expect(job['setLastUpdateDate']).toHaveBeenCalledWith(3000)

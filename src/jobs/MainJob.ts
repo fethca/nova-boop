@@ -38,7 +38,7 @@ export class MainJob {
         await this.setLastUpdateDate(date)
         this.logger.info('redis_no_stored_date')
       } else {
-        const inMemoryDate = Number(await store.localInstance.get('last-update'))
+        const inMemoryDate = Number(store.localInstance.get('last-update'))
         if (inMemoryDate > date) {
           date = inMemoryDate
           this.logger.info('redis_reset_stored_date')

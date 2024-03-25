@@ -173,7 +173,7 @@ describe('scrappeDay', () => {
   }
 
   beforeEach(() => {
-    vi.spyOn(utils, 'wait').mockImplementation(async () => undefined)
+    vi.spyOn(utils, 'wait').mockImplementation(() => Promise.resolve())
   })
 
   it('should focus calendar and type begin date inside', async () => {
@@ -313,7 +313,7 @@ describe('loadMore', () => {
   }
 
   beforeEach(() => {
-    vi.spyOn(utils, 'wait').mockImplementation(async () => undefined)
+    vi.spyOn(utils, 'wait').mockImplementation(() => Promise.resolve())
   })
 
   it('should get load more button', async () => {

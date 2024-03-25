@@ -1,7 +1,7 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import isEqual from 'lodash.isequal'
 import uniqWith from 'lodash.uniqwith'
-import moment, { Moment } from 'moment'
+import moment, { Moment, utc } from 'moment'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 import { setTempDate } from '../helpers/redis.js'
 import { click, findText, wait } from '../helpers/utils.js'
@@ -70,8 +70,8 @@ export class NovaJob {
   }
 
   private calculateDiff(from: Moment) {
-    const fromDate = moment(moment.utc(from).startOf('day'))
-    const nowDate = moment(moment.utc(Date.now()).startOf('day'))
+    const fromDate = moment(utc(from).startOf('day'))
+    const nowDate = moment(utc(Date.now()).startOf('day'))
     return nowDate.diff(fromDate, 'days')
   }
 
@@ -114,7 +114,7 @@ export class NovaJob {
       for (let i = 0; i < 3; i++) {
         const allTracks = await this.validateDisplay(tracks, toHour)
         if (allTracks) break
-        this.loadMore(page, 1)
+        await this.loadMore(page, 1)
       }
       result = await this.extract(tracks, beginDate, toHour)
 
@@ -164,7 +164,7 @@ export class NovaJob {
 
   private async extract(elements: ElementHandle<Element>[], date: string, toHour: string): Promise<ITrack[]> {
     const { success, failure } = this.logger.action('nova_extract')
-    let tracks: ITrack[] = []
+    const tracks: ITrack[] = []
     try {
       for (const [index, element] of elements.entries()) {
         const artist = (await element.$eval('h2', (el) => el.textContent)) || ''

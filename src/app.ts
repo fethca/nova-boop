@@ -13,7 +13,7 @@ export class App {
     try {
       await this.initRedis()
       await this.initSpotify()
-      new MainJob().run()
+      void new MainJob().run()
       process.on('SIGTERM', this.exit.bind(this))
       success()
     } catch (error) {
@@ -44,7 +44,7 @@ export class App {
     }
   }
 
-  private async exit() {
+  private exit() {
     this.logger.info('app_stop')
   }
 }
