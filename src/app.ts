@@ -1,43 +1,50 @@
-import { MainJob } from './jobs/main'
-import { Logger } from './logger'
-import { redisStore } from './services/redis'
-import { spotifyService } from './services/spotify'
-import { Message, settings } from './settings'
+import { Logger } from '@fethcat/logger'
+import { MainJob } from './jobs/MainJob.js'
+import { spotifyService, store } from './services.js'
+import { Message, settings } from './settings.js'
 
-const { instanceId, app, logs } = settings
+const { instanceId, logs, metadata } = settings
 
 export class App {
-  private logger = Logger.create<Message>(instanceId, logs.common, { app })
+  logger = Logger.create<Message>(instanceId, logs, metadata)
 
   async run(): Promise<void> {
     const { success, failure } = this.logger.action('app_start')
     try {
-      await this.connectSpotify()
-      await redisStore.initClient(settings.redis)
-      new MainJob(this.logger.child()).run()
+      await this.initRedis()
+      await this.initSpotify()
+      void new MainJob().run()
       process.on('SIGTERM', this.exit.bind(this))
       success()
     } catch (error) {
       failure(error)
+      process.exit(1)
     }
   }
 
-  private async connectSpotify() {
-    const { success, failure } = this.logger.action('connect_spotify')
+  private async initRedis() {
+    const { success, failure } = this.logger.action('redis_init_store')
     try {
-      await spotifyService
-        .clientCredentialsGrant()
-        .then((data) => spotifyService.setAccessToken(data.body['access_token']))
-        .catch((error) => {
-          throw error
-        })
+      await store.initClient(settings.redis)
       success()
     } catch (error) {
-      failure(error)
+      throw failure(error)
     }
   }
 
-  private async exit() {
+  private async initSpotify() {
+    const { success, failure } = this.logger.action('spotify_connect')
+    try {
+      spotifyService.setRefreshToken(settings.spotify.refresh_token)
+      const data = await spotifyService.refreshAccessToken()
+      spotifyService.setAccessToken(data.body['access_token'])
+      success()
+    } catch (error) {
+      throw failure(error)
+    }
+  }
+
+  private exit() {
     this.logger.info('app_stop')
   }
 }

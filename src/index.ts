@@ -1,3 +1,3 @@
-import { App } from './app'
+import { App } from './app.js'
 
-new App().run()
+void new App().run()

@@ -1,29 +1,9 @@
 {
-    "include": [
-        "src",
-    ],
-    "ts-node": {
-        "compiler": "ttypescript"
-    },
-    "compilerOptions": {
-        "outDir": "dist",
-        "target": "es6",
-        "module": "commonjs",
-        "sourceMap": true,
-        "resolveJsonModule": true,
-        "esModuleInterop": true,
-        "strict": true,
-        "noImplicitAny": false,
-        "baseUrl": ".",
-        "paths": {
-            "@src/*": [
-                "src/*"
-            ],
-        },
-        "plugins": [
-            {
-                "transform": "typescript-transform-paths"
-            }
-        ]
-    }
+  "include": ["src", "tests", "vitest.config.ts"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "nodenext",
+    "strict": true,
+    "typeRoots": ["./node_modules/@types", "./types"]
+  }
 }
