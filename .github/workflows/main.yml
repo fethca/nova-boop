@@ -21,7 +21,14 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
           yarn install
+
+      - name: Lint, format & tests
+        run: |
+          yarn lint
+          yarn format --check
+          yarn test:unit
 
       - name: Build and push Docker image
         run: |
