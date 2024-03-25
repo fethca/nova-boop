@@ -93,7 +93,7 @@ export class SpotifyJob {
     }
   }
 
-  private async getTracksBatch<T>(): Promise<{ playlist: string[]; expected: number }> {
+  private async getTracksBatch(): Promise<{ playlist: string[]; expected: number }> {
     let next: boolean = true
     let offset: number = 0
     let playlist: string[] = []
@@ -118,10 +118,7 @@ export class SpotifyJob {
   private async uploadTracks(tracks: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_tracks')
     let payload: string[] = []
-    const reorder: {
-      positions?: ReadonlyArray<number> | undefined
-      uri: string
-    }[] = []
+    const reorder: { positions?: ReadonlyArray<number> | undefined; uri: string }[] = []
     try {
       for (const track of tracks) {
         const index = playlist.indexOf(track)
@@ -129,7 +126,7 @@ export class SpotifyJob {
         payload.push(this.prefix(track))
       }
       this.logger.addMeta({ reorder: reorder.length, upload: payload.length - reorder.length })
-      await this.uploadBatch(reorder, spotifyService.removeTracksFromPlaylist.bind(spotifyService))
+      if (reorder.length) await this.uploadBatch(reorder, spotifyService.removeTracksFromPlaylist.bind(spotifyService))
       await this.uploadBatch(payload, spotifyService.addTracksToPlaylist.bind(spotifyService), { position: 0 })
       success()
     } catch (error) {
@@ -148,12 +145,12 @@ export class SpotifyJob {
   ) {
     const { success, failure } = this.logger.action('spotify_upload_batch')
     try {
-      for (let i = payload.length; i >= 0; ) {
+      for (let i = payload.length; i > 0; ) {
         const end = i
         const start = i - 100 > 0 ? i - 100 : 0
         const batch = payload.slice(start, end)
         await uploadFn(settings.spotify.playlist, batch, opts)
-        i = start - 1
+        i = start
       }
       success()
     } catch (error) {
