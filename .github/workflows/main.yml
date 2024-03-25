@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
           yarn install
 
       - name: Lint, format & tests
