@@ -1,8 +1,6 @@
 import { Logger } from '@fethcat/logger'
-import { wait } from './helpers/utils.js'
-import { MainJob } from './jobs/main.js'
-import { store } from './services/redis.js'
-import { connectSpotify } from './services/spotify.js'
+import { MainJob } from './jobs/MainJob.js'
+import { spotifyService, store } from './services.js'
 import { Message, settings } from './settings.js'
 
 const { instanceId, logs, metadata } = settings
@@ -13,7 +11,6 @@ export class App {
   async run(): Promise<void> {
     const { success, failure } = this.logger.action('app_start')
     try {
-      await wait(2000)
       await this.initRedis()
       await this.initSpotify()
       new MainJob().run()
@@ -21,6 +18,7 @@ export class App {
       success()
     } catch (error) {
       failure(error)
+      process.exit(1)
     }
   }
 
@@ -37,7 +35,9 @@ export class App {
   private async initSpotify() {
     const { success, failure } = this.logger.action('spotify_connect')
     try {
-      await connectSpotify()
+      spotifyService.setRefreshToken(settings.spotify.refresh_token)
+      const data = await spotifyService.refreshAccessToken()
+      spotifyService.setAccessToken(data.body['access_token'])
       success()
     } catch (error) {
       throw failure(error)

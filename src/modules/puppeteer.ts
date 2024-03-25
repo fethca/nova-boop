@@ -1,11 +1,11 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import { Browser, DEFAULT_INTERCEPT_RESOLUTION_PRIORITY, Page } from 'puppeteer'
 import puppeteer from 'puppeteer-extra'
+import blockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import randomUseragent from 'random-useragent'
 import { Message, settings } from '../settings.js'
-
-import blockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
+import { IPuppeteerManager } from '../types.js'
 
 const { instanceId, logs, metadata } = settings
 
@@ -31,12 +31,12 @@ puppeteer.default
   )
   .use(StealthPlugin())
 
-export class PuppeteerManager {
-  protected logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
-  private isReleased = false
-  private retries = 0
+export class PuppeteerManager implements IPuppeteerManager {
+  logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
+  isReleased = false
+  retries = 0
 
-  private async init() {
+  async init() {
     this.isReleased = false
     this.retries = 0
     const browser = await this.runBrowser()
@@ -54,18 +54,7 @@ export class PuppeteerManager {
     })
   }
 
-  public async release(browser: Browser) {
-    const { success, failure } = this.logger.action('puppeteer_stop_browser')
-    try {
-      this.isReleased = true
-      await browser.close()
-      success()
-    } catch (error) {
-      failure(error)
-    }
-  }
-
-  public async runBrowser(): Promise<Browser> {
+  async runBrowser(): Promise<Browser> {
     const { success, failure } = this.logger.action('puppeteer_run_browser')
     try {
       const browser = await puppeteer.default.launch({
@@ -92,7 +81,7 @@ export class PuppeteerManager {
     }
   }
 
-  public async createPage(browser: Browser, url: string): Promise<Page> {
+  async createPage(browser: Browser, url: string): Promise<Page> {
     const { success, failure } = this.logger.action('puppeteer_create_page')
     try {
       if (!browser) await this.init()
@@ -112,26 +101,15 @@ export class PuppeteerManager {
       await page.setDefaultNavigationTimeout(0)
 
       await page.evaluateOnNewDocument(() => {
-        //pass webdriver check
-        Object.defineProperty(navigator, 'webdriver', {
-          get: () => false,
-        })
+        Object.defineProperty(navigator, 'webdriver', { get: () => false })
       })
 
       await page.evaluateOnNewDocument(() => {
-        // Overwrite the `plugins` property to use a custom getter.
-        Object.defineProperty(navigator, 'plugins', {
-          // This just needs to have `length > 0` for the current test,
-          // but we could mock the plugins too if necessary.
-          get: () => [1, 2, 3, 4, 5],
-        })
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
       })
 
       await page.evaluateOnNewDocument(() => {
-        // Overwrite the `plugins` property to use a custom getter.
-        Object.defineProperty(navigator, 'languages', {
-          get: () => ['en-US', 'en'],
-        })
+        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] })
       })
 
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 })
@@ -139,6 +117,17 @@ export class PuppeteerManager {
       return page
     } catch (error) {
       throw failure(error)
+    }
+  }
+
+  public async release(browser: Browser) {
+    const { success, failure } = this.logger.action('puppeteer_stop_browser')
+    try {
+      this.isReleased = true
+      await browser.close()
+      success()
+    } catch (error) {
+      failure(error)
     }
   }
 }

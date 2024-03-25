@@ -1,7 +1,7 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import Fuse from 'fuse.js'
 import { formatName, formatTitle, notEmpty } from '../helpers/utils.js'
-import { spotifyService } from '../services/spotify.js'
+import { spotifyService } from '../services.js'
 import { Message, settings } from '../settings.js'
 import { ITrack, Response } from '../types.js'
 
@@ -10,30 +10,31 @@ const { instanceId, logs, metadata } = settings
 export class SpotifyJob {
   protected logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
 
-  async run(songs: ITrack[]) {
-    const { success, failure } = this.logger.action('spotify_handle_songs')
+  async run(tracks: ITrack[]) {
+    const { success, failure } = this.logger.action('spotify_handle_tracks')
     try {
       const ids: string[] = []
-      for (const song of songs) {
-        const id = await this.getId(song)
+      for (const track of tracks) {
+        const id = await this.getId(track)
         if (id) ids.push(id)
       }
       const playlist = await this.getPlaylist()
-      await this.uploadSongs(ids, playlist)
+      await this.uploadTracks(ids, playlist)
       success()
     } catch (error) {
       failure(error)
     }
   }
 
-  private async getId(song: ITrack): Promise<string | null> {
-    if (song.spotifyId) return song.spotifyId
-    const { artist, title } = song
-    return await this.searchTrack(artist, title)
+  private async getId(track: ITrack): Promise<string | null> {
+    if (track.spotifyId) return track.spotifyId
+    const { artist, title } = track
+    const id = await this.searchTrack(artist, title)
+    return id
   }
 
   private async searchTrack(artist: string, title: string): Promise<string | null> {
-    const { success, failure, skip } = this.logger.action('spotify_search_song')
+    const { success, failure, skip } = this.logger.action('spotify_search_tracks')
     try {
       const artists = artist.split('/')
       const formattedTitle = formatTitle(title)
@@ -114,18 +115,18 @@ export class SpotifyJob {
     return { playlist, expected }
   }
 
-  private async uploadSongs(songs: string[], playlist: string[]) {
-    const { success, failure } = this.logger.action('spotify_upload_songs')
+  private async uploadTracks(tracks: string[], playlist: string[]) {
+    const { success, failure } = this.logger.action('spotify_upload_tracks')
     let payload: string[] = []
     const reorder: {
       positions?: ReadonlyArray<number> | undefined
       uri: string
     }[] = []
     try {
-      for (const song of songs) {
-        const index = playlist.indexOf(song)
-        if (index > -1) reorder.push({ uri: this.prefix(song) })
-        payload.push(this.prefix(song))
+      for (const track of tracks) {
+        const index = playlist.indexOf(track)
+        if (index > -1) reorder.push({ uri: this.prefix(track) })
+        payload.push(this.prefix(track))
       }
       this.logger.addMeta({ reorder: reorder.length, upload: payload.length - reorder.length })
       await this.uploadBatch(reorder, spotifyService.removeTracksFromPlaylist.bind(spotifyService))
