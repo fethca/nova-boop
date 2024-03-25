@@ -1,4 +1,5 @@
 import { ILogger, Logger } from '@fethcat/logger'
+import locateChrome from 'locate-chrome'
 import { Browser, DEFAULT_INTERCEPT_RESOLUTION_PRIORITY, Page } from 'puppeteer'
 import puppeteer from 'puppeteer-extra'
 import blockResourcesPlugin from 'puppeteer-extra-plugin-block-resources'
@@ -57,8 +58,13 @@ export class PuppeteerManager implements IPuppeteerManager {
   async runBrowser(): Promise<Browser> {
     const { success, failure } = this.logger.action('puppeteer_run_browser')
     try {
+      const executablePath = await new Promise((resolve) => locateChrome((path) => resolve(path)))
+      this.logger.addMeta({ executablePath })
+      if (!executablePath || typeof executablePath !== 'string') throw failure("Can't find Chrome")
+
       const browser = await puppeteer.default.launch({
-        headless: false,
+        executablePath,
+        headless: true,
         devtools: false,
         ignoreHTTPSErrors: true,
         slowMo: 0,
