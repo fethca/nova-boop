@@ -15,7 +15,7 @@ export class MainJob {
     const { success, failure } = this.logger.action('main_job')
     try {
       const storedDate = await this.getLastUpdateDate()
-      const from = formatDate(storedDate).utcOffset('+02:00')
+      const from = formatDate(storedDate)
       const songs = await new NovaJob().run(from)
       if (songs.length) {
         await new SpotifyJob().run(songs)

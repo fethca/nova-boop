@@ -1,6 +1,6 @@
 import { MockedLogger, mockAction } from '@fethcat/logger'
 import mockdate from 'mockdate'
-import moment from 'moment'
+import moment from 'moment-timezone'
 import { Page } from 'puppeteer'
 import { setTempDate } from '../../../src/helpers/redis.js'
 import * as utils from '../../../src/helpers/utils.js'
@@ -10,7 +10,7 @@ import { MockedPuppeteer, mockBrowser, mockElement, mockPage, mockTrack } from '
 
 vi.mock('../../../src/modules/puppeteer')
 vi.mock('../../../src/helpers/redis')
-const fromDate = moment(1710239648000) //Tuesday, March 12, 2024 10:34:08 AM
+const fromDate = moment(1710239648000).tz('Europe/Paris') //Tuesday, March 12, 2024 11:34:08 AM
 mockdate.set(1711103648000) // Friday, March 22, 2024 10:34:08 AM
 
 describe('run', () => {

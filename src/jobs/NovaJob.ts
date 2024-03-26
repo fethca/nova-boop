@@ -1,7 +1,7 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import isEqual from 'lodash.isequal'
 import uniqWith from 'lodash.uniqwith'
-import moment, { Moment } from 'moment'
+import moment, { Moment } from 'moment-timezone'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 import { setTempDate } from '../helpers/redis.js'
 import { click, findText, wait } from '../helpers/utils.js'
@@ -70,8 +70,8 @@ export class NovaJob {
   }
 
   private calculateDiff(from: Moment) {
-    const fromDate = moment(moment.utc(from).startOf('day'))
-    const nowDate = moment(moment.utc(Date.now()).startOf('day'))
+    const fromDate = moment(from).startOf('day')
+    const nowDate = moment(Date.now()).startOf('day')
     return nowDate.diff(fromDate, 'days')
   }
 
