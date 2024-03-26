@@ -127,7 +127,7 @@ describe('searchTrack', () => {
     const job = createJob()
     const { skip } = mockAction(job['logger'])
     const result = await job['searchTrack']('artist', 'searchedTrack')
-    expect(skip).toHaveBeenCalledWith('spotify_no_match', { artist: 'artist', title: 'searchedTrack' })
+    expect(skip).toHaveBeenCalledWith('spotify_no_match')
     expect(result).toBeNull()
   })
 
@@ -139,12 +139,13 @@ describe('searchTrack', () => {
     expect(result).toBe('id')
   })
 
-  it('should log failure and throw', async () => {
+  it('should log failure and return null', async () => {
     const job = createJob()
     const { failure } = mockAction(job['logger'])
     spotifyService.searchTracks = vi.fn().mockRejectedValue(new Error('500'))
-    await expect(job['searchTrack']('artist', 'searchedTrack')).rejects.toThrow(new Error('500'))
+    const result = await job['searchTrack']('artist', 'searchedTrack')
     expect(failure).toHaveBeenCalledWith(new Error('500'))
+    expect(result).toBeNull()
   })
 })
 

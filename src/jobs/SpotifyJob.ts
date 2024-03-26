@@ -34,7 +34,7 @@ export class SpotifyJob {
   }
 
   private async searchTrack(artist: string, title: string): Promise<string | null> {
-    const { success, failure, skip } = this.logger.action('spotify_search_tracks')
+    const { success, failure, skip } = this.logger.action('spotify_search_tracks', { artist, title })
     try {
       const artists = artist.split('/')
       const formattedTitle = formatTitle(title)
@@ -54,14 +54,15 @@ export class SpotifyJob {
       }
 
       if (!track) {
-        skip('spotify_no_match', { artist, title })
+        skip('spotify_no_match')
         return null
       }
 
       success()
       return track.id
     } catch (error) {
-      throw failure(error)
+      failure(error)
+      return null
     }
   }
 
@@ -69,12 +70,12 @@ export class SpotifyJob {
     const fuseOptions = { includeScore: true, threshold: 1.0 }
 
     const titleFuse = new Fuse([title], fuseOptions)
-    const titleScore = Number(titleFuse.search(formatTitle(track.name))[0].score)
+    const titleScore = Number(titleFuse.search(formatTitle(track.name))[0]?.score)
 
     const artists = artist.split('/').map((artist) => formatName(artist))
     const artistsFuse = new Fuse(artists, { ...fuseOptions, useExtendedSearch: true })
     const artistQuery = track.artists.map((person) => formatName(person.name)).join(' | ')
-    const artistScore = Number(artistsFuse.search(artistQuery)[0].score)
+    const artistScore = Number(artistsFuse.search(artistQuery)[0]?.score)
 
     const metadata = { title, titleQuery: formatTitle(track.name), titleScore, artist, artistQuery, artistScore }
     this.logger.info('spotify_match_track_score', metadata)
