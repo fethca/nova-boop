@@ -40,6 +40,19 @@ describe('run', () => {
     expect(SpotifyJob.prototype.run).toHaveBeenCalledWith([mockTrack()])
   })
 
+  it('should set last update date if spotify job is successfull', async () => {
+    SpotifyJob.prototype.run = vi.fn().mockResolvedValue(true)
+    const job = createJob()
+    await job.run()
+    expect(job['setLastUpdateDate']).toHaveBeenCalledWith(1710933120000)
+  })
+
+  it('should not set last update date if spotify job failed', async () => {
+    const job = createJob()
+    await job.run()
+    expect(job['setLastUpdateDate']).not.toHaveBeenCalled()
+  })
+
   it('should loop', async () => {
     vi.useFakeTimers()
     vi.spyOn(MainJob.prototype, 'run')

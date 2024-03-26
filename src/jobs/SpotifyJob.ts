@@ -21,6 +21,7 @@ export class SpotifyJob {
       const playlist = await this.getPlaylist()
       await this.uploadTracks(ids, playlist)
       success()
+      return true
     } catch (error) {
       failure(error)
     }

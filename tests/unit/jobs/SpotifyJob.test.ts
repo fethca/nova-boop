@@ -39,11 +39,12 @@ describe('run', () => {
     expect(job['uploadTracks']).toHaveBeenCalledWith(['trackId'], ['id12', 'id72'])
   })
 
-  it('should log success', async () => {
+  it('should log success and return true', async () => {
     const job = createJob()
     const { success } = mockAction(job['logger'])
-    await job.run([mockTrack()])
+    const result = await job.run([mockTrack()])
     expect(success).toHaveBeenCalledWith()
+    expect(result).toBe(true)
   })
 
   it('should log failure', async () => {
