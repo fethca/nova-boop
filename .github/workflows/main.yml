@@ -1,0 +1,53 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.9.0
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install dependencies
+        run: |
+          export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+          yarn install
+
+      - name: Lint, format & tests
+        run: |
+          yarn lint
+          yarn format --check
+          yarn test:unit
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t fethca/nova-boop:latest .
+          docker login -u "$DOCKER_USERNAME" -p "$DOCKER_TOKEN"
+          docker push fethca/nova-boop:latest
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Deploy new image
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            if [ "$(docker ps -q --filter "name=nova-boop")" ]; then docker stop nova-boop && docker rm nova-boop; fi
+            if [ "$(docker images -q 'fethca/nova-boop')" ]; then docker rmi fethca/nova-boop; fi
+            cd ~/traefik
+            docker-compose up -d --remove-orphans nova-boop
