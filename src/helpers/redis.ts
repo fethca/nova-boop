@@ -1,4 +1,4 @@
-import moment from 'moment'
+import moment from 'moment-timezone'
 
 let tempDate: number
 
@@ -8,5 +8,5 @@ export function getTempDate() {
 
 export function setTempDate(date: string, hour: string) {
   const dateFormat = 'MM/DD/YYYY HH:mm'
-  tempDate = moment(`${date} ${hour}`, dateFormat).utcOffset('+02:00').valueOf()
+  tempDate = moment(`${date} ${hour}`, dateFormat).tz('Europe/Paris').valueOf()
 }
