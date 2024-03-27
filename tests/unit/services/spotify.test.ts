@@ -131,7 +131,7 @@ describe('getTracksBatch', () => {
     expect(failure).toHaveBeenCalledWith(new Error('WebapiRegularError: Request timed out'))
   })
 
-  it('should retry up to 10 times with the same offset before throwing', async () => {
+  it('should retry up to 10 times before throwing', async () => {
     const spotify = createService()
     const { failure } = mockAction(spotify['logger'])
     spotify['getPlaylistTracks'] = vi.fn().mockRejectedValue(new Error('WebapiRegularError: Request timed out'))
