@@ -35,7 +35,7 @@ export class SpotifyService extends SpotifyWebApi {
   }
 
   cachePlaylist(playlist: string[]) {
-    this.inMemoryPlaylist = playlist
+    this.inMemoryPlaylist = [...playlist]
   }
 
   private async getTracksBatch(): Promise<{ playlist: string[]; expected: number }> {
