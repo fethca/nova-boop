@@ -1,6 +1,6 @@
 import { Logger } from '@fethcat/logger'
 import { MainJob } from './jobs/MainJob.js'
-import { spotifyService, store } from './services.js'
+import { spotifyService, store } from './services/services.js'
 import { Message, settings } from './settings.js'
 
 const { instanceId, logs, metadata } = settings
@@ -35,9 +35,8 @@ export class App {
   private async initSpotify() {
     const { success, failure } = this.logger.action('spotify_connect')
     try {
-      spotifyService.setRefreshToken(settings.spotify.refresh_token)
-      const data = await spotifyService.refreshAccessToken()
-      spotifyService.setAccessToken(data.body['access_token'])
+      await spotifyService.refreshToken()
+      await spotifyService.fetchPlaylist()
       success()
     } catch (error) {
       throw failure(error)

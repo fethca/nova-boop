@@ -1,7 +1,7 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import { getTempDate } from '../helpers/redis.js'
 import { formatDate } from '../helpers/utils.js'
-import { store } from '../services.js'
+import { store } from '../services/services.js'
 import { Message, settings } from '../settings.js'
 import { NovaJob } from './NovaJob.js'
 import { SpotifyJob } from './SpotifyJob.js'

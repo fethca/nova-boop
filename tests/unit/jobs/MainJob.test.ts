@@ -4,7 +4,7 @@ import { setTempDate } from '../../../src/helpers/redis.js'
 import { MainJob } from '../../../src/jobs/MainJob.js'
 import { NovaJob } from '../../../src/jobs/NovaJob.js'
 import { SpotifyJob } from '../../../src/jobs/SpotifyJob.js'
-import { store } from '../../../src/services.js'
+import { store } from '../../../src/services/services.js'
 import { mockTrack } from '../../mock.js'
 
 vi.mock('../../../src/jobs/NovaJob')

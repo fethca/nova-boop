@@ -1,1 +1,1 @@
-vi.mock('../src/services')
+vi.mock('../src/services/services')

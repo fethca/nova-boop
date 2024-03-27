@@ -1,6 +1,6 @@
 import { MockedLogger, mockAction } from '@fethcat/logger'
 import { App } from '../../src/app.js'
-import { spotifyService, store } from '../../src/services.js'
+import { spotifyService, store } from '../../src/services/services.js'
 
 vi.mock('../../src/jobs/MainJob')
 
@@ -86,21 +86,22 @@ describe('initRedis', () => {
 
 describe('initSpotify', () => {
   beforeEach(() => {
-    spotifyService.refreshAccessToken = vi.fn().mockResolvedValue({ body: { access_token: 'token' } })
+    spotifyService.refreshToken = vi.fn()
+    spotifyService.fetchPlaylist = vi.fn()
   })
 
-  it('should set refresh token', async () => {
+  it('should refresh token', async () => {
     const app = new App()
     app['logger'] = new MockedLogger()
     await app['initSpotify']()
-    expect(spotifyService.setRefreshToken).toHaveBeenCalledWith('spotify_refresh_token')
+    expect(spotifyService.refreshToken).toHaveBeenCalledWith()
   })
 
-  it('should refresh access token', async () => {
+  it('should fetch playlist', async () => {
     const app = new App()
     app['logger'] = new MockedLogger()
     await app['initSpotify']()
-    expect(spotifyService.refreshAccessToken).toHaveBeenCalledWith()
+    expect(spotifyService.fetchPlaylist).toHaveBeenCalledWith()
   })
 
   it('should log success', async () => {
@@ -111,7 +112,7 @@ describe('initSpotify', () => {
   })
 
   it('should log failure and throw', async () => {
-    spotifyService.refreshAccessToken = vi.fn().mockRejectedValue(new Error('500'))
+    spotifyService.fetchPlaylist = vi.fn().mockRejectedValue(new Error('500'))
     const app = new App()
     const { failure } = mockAction(app['logger'])
     await expect(app['initSpotify']()).rejects.toThrow(new Error('500'))
