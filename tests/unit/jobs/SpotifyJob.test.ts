@@ -16,6 +16,12 @@ describe('run', () => {
     spotifyService.fetchPlaylist = vi.fn().mockResolvedValue(['id12', 'id72'])
   })
 
+  it('should refresh access token', async () => {
+    const job = createJob()
+    await job.run([mockTrack()])
+    expect(spotifyService.refreshAccessToken).toHaveBeenCalledWith()
+  })
+
   it('should get id of each track', async () => {
     const job = createJob()
     await job.run([mockTrack(), mockTrack({ title: 'track2' })])
@@ -23,7 +29,7 @@ describe('run', () => {
     expect(job['getId']).toHaveBeenCalledWith(mockTrack({ title: 'track2' }))
   })
 
-  it('should get the spotify playlist', async () => {
+  it('should fetch the spotify playlist', async () => {
     const job = createJob()
     await job.run([mockTrack()])
     expect(spotifyService.fetchPlaylist).toHaveBeenCalledWith()
