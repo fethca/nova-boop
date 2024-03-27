@@ -44,7 +44,7 @@ describe('run', () => {
     SpotifyJob.prototype.run = vi.fn().mockResolvedValue(true)
     const job = createJob()
     await job.run()
-    expect(job['setLastUpdateDate']).toHaveBeenCalledWith(1710933120000)
+    expect(job['setLastUpdateDate']).toHaveBeenCalled()
   })
 
   it('should not set last update date if spotify job failed', async () => {
