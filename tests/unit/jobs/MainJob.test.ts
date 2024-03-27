@@ -4,7 +4,7 @@ import { setTempDate } from '../../../src/helpers/redis.js'
 import { MainJob } from '../../../src/jobs/MainJob.js'
 import { NovaJob } from '../../../src/jobs/NovaJob.js'
 import { SpotifyJob } from '../../../src/jobs/SpotifyJob.js'
-import { store } from '../../../src/services.js'
+import { store } from '../../../src/services/services.js'
 import { mockTrack } from '../../mock.js'
 
 vi.mock('../../../src/jobs/NovaJob')
@@ -38,6 +38,19 @@ describe('run', () => {
     const job = createJob()
     await job.run()
     expect(SpotifyJob.prototype.run).toHaveBeenCalledWith([mockTrack()])
+  })
+
+  it('should set last update date if spotify job is successfull', async () => {
+    SpotifyJob.prototype.run = vi.fn().mockResolvedValue(true)
+    const job = createJob()
+    await job.run()
+    expect(job['setLastUpdateDate']).toHaveBeenCalledWith(1710933120000)
+  })
+
+  it('should not set last update date if spotify job failed', async () => {
+    const job = createJob()
+    await job.run()
+    expect(job['setLastUpdateDate']).not.toHaveBeenCalled()
   })
 
   it('should loop', async () => {

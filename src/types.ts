@@ -19,3 +19,8 @@ export interface IPuppeteerManager {
   createPage(browser: Browser, url: string): Promise<Page>
   release(browser: Browser): Promise<void>
 }
+
+export type ISpotifyError = {
+  code: number
+  message: string
+}

@@ -1,7 +1,7 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import { getTempDate } from '../helpers/redis.js'
 import { formatDate } from '../helpers/utils.js'
-import { store } from '../services.js'
+import { store } from '../services/services.js'
 import { Message, settings } from '../settings.js'
 import { NovaJob } from './NovaJob.js'
 import { SpotifyJob } from './SpotifyJob.js'
@@ -18,8 +18,8 @@ export class MainJob {
       const from = formatDate(storedDate)
       const songs = await new NovaJob().run(from)
       if (songs.length) {
-        await new SpotifyJob().run(songs)
-        await this.setLastUpdateDate(getTempDate())
+        const success = await new SpotifyJob().run(songs)
+        if (success) await this.setLastUpdateDate(getTempDate())
       }
       setTimeout(this.run.bind(this), 1000 * 60 * 30)
       success()

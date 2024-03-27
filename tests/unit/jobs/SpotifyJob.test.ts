@@ -1,6 +1,6 @@
 import { MockedLogger, mockAction } from '@fethcat/logger'
 import { SpotifyJob } from '../../../src/jobs/SpotifyJob.js'
-import { spotifyService } from '../../../src/services.js'
+import { spotifyService } from '../../../src/services/services.js'
 import { mockTrack } from '../../mock.js'
 
 describe('run', () => {
@@ -8,10 +8,19 @@ describe('run', () => {
     const job = new SpotifyJob()
     job['logger'] = new MockedLogger()
     job['getId'] = vi.fn().mockResolvedValue('trackId')
-    job['getPlaylist'] = vi.fn().mockResolvedValue(['id12', 'id72'])
     job['uploadTracks'] = vi.fn()
     return job
   }
+
+  beforeEach(() => {
+    spotifyService.fetchPlaylist = vi.fn().mockResolvedValue(['id12', 'id72'])
+  })
+
+  it('should refresh access token', async () => {
+    const job = createJob()
+    await job.run([mockTrack()])
+    expect(spotifyService.refreshAccessToken).toHaveBeenCalledWith()
+  })
 
   it('should get id of each track', async () => {
     const job = createJob()
@@ -20,10 +29,10 @@ describe('run', () => {
     expect(job['getId']).toHaveBeenCalledWith(mockTrack({ title: 'track2' }))
   })
 
-  it('should get the spotify playlist', async () => {
+  it('should fetch the spotify playlist', async () => {
     const job = createJob()
     await job.run([mockTrack()])
-    expect(job['getPlaylist']).toHaveBeenCalledWith()
+    expect(spotifyService.fetchPlaylist).toHaveBeenCalledWith()
   })
 
   it('should upload the tracks to playlist', async () => {
@@ -39,11 +48,12 @@ describe('run', () => {
     expect(job['uploadTracks']).toHaveBeenCalledWith(['trackId'], ['id12', 'id72'])
   })
 
-  it('should log success', async () => {
+  it('should log success and return true', async () => {
     const job = createJob()
     const { success } = mockAction(job['logger'])
-    await job.run([mockTrack()])
+    const result = await job.run([mockTrack()])
     expect(success).toHaveBeenCalledWith()
+    expect(result).toBe(true)
   })
 
   it('should log failure', async () => {
@@ -149,64 +159,6 @@ describe('searchTrack', () => {
   })
 })
 
-describe('getPlaylist', () => {
-  function createJob() {
-    const job = new SpotifyJob()
-    job['logger'] = new MockedLogger()
-    job['getTracksBatch'] = vi.fn().mockResolvedValue({ playlist: [mockTrack()], expected: 1 })
-    return job
-  }
-
-  it('should get playlist tracks by batch', async () => {
-    const job = createJob()
-    await job['getPlaylist']()
-    expect(job['getTracksBatch']).toHaveBeenCalledWith()
-  })
-
-  it('should log success and return playlist', async () => {
-    const job = createJob()
-    const { success } = mockAction(job['logger'])
-    const result = await job['getPlaylist']()
-    expect(success).toHaveBeenCalledWith({ nbTracks: 1, expected: 1 })
-    expect(result).toEqual([mockTrack()])
-  })
-
-  it('should log failure and throw', async () => {
-    const job = createJob()
-    const { failure } = mockAction(job['logger'])
-    job['getTracksBatch'] = vi.fn().mockRejectedValue(new Error('500'))
-    await expect(job['getPlaylist']()).rejects.toThrow(new Error('500'))
-    expect(failure).toHaveBeenCalledWith(new Error('500'))
-  })
-})
-
-describe('getTracksBatch', () => {
-  beforeEach(() => {
-    spotifyService.getPlaylistTracks = vi
-      .fn()
-      .mockResolvedValueOnce({ body: { items: [{ track: { id: null } }], next: true, total: 2 } })
-      .mockResolvedValueOnce({ body: { items: [{ track: { id: 'id1' } }], next: true, total: 2 } })
-      .mockResolvedValue({ body: { items: [{ track: { id: 'id2' } }], next: null, total: 2 } })
-  })
-
-  it('should get playlist tracks by batch', async () => {
-    const job = new SpotifyJob()
-    await job['getTracksBatch']()
-    expect(spotifyService.getPlaylistTracks).toHaveBeenCalledWith('playlist', {
-      limit: 100,
-      offset: 0,
-      fields: 'total, next, limit, offset, items(track(id))',
-    })
-    expect(spotifyService.getPlaylistTracks).toHaveBeenCalledTimes(3)
-  })
-
-  it('should return the playlist', async () => {
-    const job = new SpotifyJob()
-    const result = await job['getTracksBatch']()
-    expect(result).toEqual({ playlist: ['id1', 'id2'], expected: 2 })
-  })
-})
-
 describe('uploadTracks', () => {
   function createJob() {
     const job = new SpotifyJob()
@@ -231,6 +183,12 @@ describe('uploadTracks', () => {
     const job = createJob()
     await job['uploadTracks'](['id'], ['id1', 'id2'])
     expect(job['uploadBatch']).toHaveBeenCalledWith(['spotify:track:id'], expect.any(Function), { position: 0 })
+  })
+
+  it('should cache updated playlist', async () => {
+    const job = createJob()
+    await job['uploadTracks'](['id12', 'id2', 'id1'], ['id1', 'id2', 'id3'])
+    expect(spotifyService.cachePlaylist).toHaveBeenCalledWith(['id12', 'id2', 'id1', 'id3'])
   })
 
   it('should log success', async () => {

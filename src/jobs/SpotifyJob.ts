@@ -1,7 +1,7 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import Fuse from 'fuse.js'
-import { formatName, formatTitle, notEmpty } from '../helpers/utils.js'
-import { spotifyService } from '../services.js'
+import { formatName, formatTitle } from '../helpers/utils.js'
+import { spotifyService } from '../services/services.js'
 import { Message, settings } from '../settings.js'
 import { ITrack, Response } from '../types.js'
 
@@ -13,14 +13,16 @@ export class SpotifyJob {
   async run(tracks: ITrack[]) {
     const { success, failure } = this.logger.action('spotify_handle_tracks')
     try {
+      await spotifyService.refreshAccessToken()
       const ids: string[] = []
       for (const track of tracks) {
         const id = await this.getId(track)
         if (id) ids.push(id)
       }
-      const playlist = await this.getPlaylist()
+      const playlist = await spotifyService.fetchPlaylist()
       await this.uploadTracks(ids, playlist)
       success()
+      return true
     } catch (error) {
       failure(error)
     }
@@ -83,39 +85,6 @@ export class SpotifyJob {
     return titleScore < 0.4 && artistScore < 0.4
   }
 
-  private async getPlaylist(): Promise<string[]> {
-    const { success, failure } = this.logger.action('spotify_get_playlist')
-    try {
-      const { playlist, expected } = await this.getTracksBatch()
-      success({ nbTracks: playlist.length, expected })
-      return playlist
-    } catch (error) {
-      throw failure(error)
-    }
-  }
-
-  private async getTracksBatch(): Promise<{ playlist: string[]; expected: number }> {
-    let next: boolean = true
-    let offset: number = 0
-    let expected: number = 0
-    const playlist: string[] = []
-    const fields = 'total, next, limit, offset, items(track(id))'
-    while (next) {
-      const data = await spotifyService.getPlaylistTracks(settings.spotify.playlist, {
-        limit: 100,
-        offset,
-        fields,
-      })
-      if (data.body.total) expected = data.body.total
-      if (data.body.items) playlist.push(...data.body.items.map((item) => item?.track?.id).filter(notEmpty))
-      if (data.body.next) {
-        next = true
-        offset = data.body.offset + data.body.limit
-      } else next = false
-    }
-    return { playlist, expected }
-  }
-
   private async uploadTracks(tracks: string[], playlist: string[]) {
     const { success, failure } = this.logger.action('spotify_upload_tracks')
     const payload: string[] = []
@@ -123,12 +92,16 @@ export class SpotifyJob {
     try {
       for (const track of tracks) {
         const index = playlist.indexOf(track)
-        if (index > -1) reorder.push({ uri: this.prefix(track) })
+        if (index > -1) {
+          playlist.splice(index, 1)
+          reorder.push({ uri: this.prefix(track) })
+        }
         payload.push(this.prefix(track))
       }
       this.logger.addMeta({ reorder: reorder.length, upload: payload.length - reorder.length })
       if (reorder.length) await this.uploadBatch(reorder, spotifyService.removeTracksFromPlaylist.bind(spotifyService))
       await this.uploadBatch(payload, spotifyService.addTracksToPlaylist.bind(spotifyService), { position: 0 })
+      spotifyService.cachePlaylist([...tracks, ...playlist])
       success()
     } catch (error) {
       failure(error)
