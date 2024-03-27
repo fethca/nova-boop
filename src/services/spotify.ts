@@ -46,8 +46,8 @@ export class SpotifyService extends SpotifyWebApi {
     const fields = 'total, next, limit, offset, items(track(id))'
     while (next) {
       let retry = 0
-      let done = false
-      while (!done && retry <= 10) {
+      let batchSuccess = false
+      while (!batchSuccess) {
         const { success, failure } = this.logger.action('spotify_get_playlist_tracks', { offset, expected })
         try {
           const data = await this.getPlaylistTracks(settings.spotify.playlist, { limit: 100, offset, fields })
@@ -60,13 +60,14 @@ export class SpotifyService extends SpotifyWebApi {
           } else {
             next = false
           }
-          done = true
+          batchSuccess = true
           success()
         } catch (error) {
           if (this.isSpotifyDownError(error)) {
             failure(error)
             await wait(5000)
             retry++
+            if (retry >= 10) throw error
           } else {
             throw failure(error)
           }
