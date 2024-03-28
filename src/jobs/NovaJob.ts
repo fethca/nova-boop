@@ -1,7 +1,7 @@
 import { ILogger, Logger } from '@fethcat/logger'
 import isEqual from 'lodash.isequal'
 import uniqWith from 'lodash.uniqwith'
-import moment, { Moment } from 'moment-timezone'
+import { DateTime } from 'luxon'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 import { setTempDate } from '../helpers/redis.js'
 import { click, findText, franceTZ, wait } from '../helpers/utils.js'
@@ -22,7 +22,7 @@ export class NovaJob {
   protected logger: ILogger<Message> = Logger.create<Message>(instanceId, logs, metadata)
   private puppeteer = new PuppeteerManager()
 
-  async run(from: Moment): Promise<ITrack[]> {
+  async run(from: number): Promise<ITrack[]> {
     const { success, failure } = this.logger.action('nova_fetch_items')
     try {
       const tracks = await this.scrappe(from)
@@ -34,7 +34,7 @@ export class NovaJob {
     }
   }
 
-  private async scrappe(from: Moment): Promise<ITrack[]> {
+  private async scrappe(from: number): Promise<ITrack[]> {
     const { success, failure } = this.logger.action('nova_scrapping')
 
     const browser: Browser = await this.puppeteer.runBrowser()
@@ -56,12 +56,12 @@ export class NovaJob {
     }
   }
 
-  private async scrappeDays(page: Page, from: Moment): Promise<ITrack[]> {
+  private async scrappeDays(page: Page, from: number): Promise<ITrack[]> {
     const diff = this.calculateDiff(from)
     const result: ITrack[] = []
     for (let i = 0; i <= diff; i++) {
-      const hour = i === 0 ? franceTZ(from).format('HH:mm') : '00:00'
-      const day = franceTZ(from).clone().add(i, 'days').format('MM/DD/YYYY')
+      const hour = i === 0 ? franceTZ(DateTime.fromMillis(from)).toFormat('HH:mm') : '00:00'
+      const day = franceTZ(DateTime.fromMillis(from)).plus({ days: i }).toFormat('MM/dd/yyyy')
       const tracks = await this.scrappeDay(page, day, hour)
       if (tracks.length) result.unshift(...tracks)
       else break
@@ -69,10 +69,10 @@ export class NovaJob {
     return result
   }
 
-  private calculateDiff(from: Moment) {
-    const fromDate = franceTZ(moment(from)).startOf('day')
-    const nowDate = franceTZ(moment(Date.now())).startOf('day')
-    return nowDate.diff(fromDate, 'days')
+  private calculateDiff(from: number) {
+    const fromDate = franceTZ(DateTime.fromMillis(from)).startOf('day')
+    const nowDate = franceTZ(DateTime.now()).startOf('day')
+    return nowDate.diff(fromDate, 'days').days
   }
 
   private async scrappeDay(page: Page, day: string, toHour: string = '00:00'): Promise<ITrack[]> {
@@ -95,8 +95,8 @@ export class NovaJob {
       const filtrer = await page.waitForSelector(findText('Filtrer'))
       await filtrer?.evaluate(click)
 
-      const now = franceTZ(moment(new Date()))
-      const fromHour = franceTZ(moment(day, 'MM/DD')).isSame(now, 'day') ? now.hour() : 24
+      const now = franceTZ(DateTime.now())
+      const fromHour = now.toFormat('MM/dd/yyyy') === day ? now.hour : 24
       const times = this.calculateLoad(parseInt(toHour.slice(0, 2)), fromHour)
 
       await this.loadMore(page, times)

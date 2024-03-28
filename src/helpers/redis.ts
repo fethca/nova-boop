@@ -1,5 +1,4 @@
-import moment from 'moment-timezone'
-import { franceTZ } from './utils.js'
+import { DateTime } from 'luxon'
 
 let tempDate: number
 
@@ -8,6 +7,6 @@ export function getTempDate() {
 }
 
 export function setTempDate(date: string, hour: string) {
-  const dateFormat = 'MM/DD/YYYY HH:mm'
-  tempDate = franceTZ(moment(`${date} ${hour}`, dateFormat)).valueOf()
+  const parisDate = DateTime.fromFormat(`${date} ${hour}`, 'MM/dd/yyyy HH:mm', { zone: 'Europe/Paris' })
+  tempDate = parisDate.toUTC().toMillis()
 }
