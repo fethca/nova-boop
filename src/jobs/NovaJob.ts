@@ -100,6 +100,7 @@ export class NovaJob {
       const times = this.calculateLoad(parseInt(toHour.slice(0, 2)), fromHour)
 
       await wait(2000)
+      await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
       await this.loadMore(page, times)
 
       const tracksBlock = await page.$('#js-programs-list')
