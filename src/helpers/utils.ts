@@ -1,5 +1,5 @@
 import latinize from 'latinize'
-import moment, { Moment } from 'moment-timezone'
+import { Moment } from 'moment-timezone'
 
 export function click(element: unknown) {
   if (element instanceof HTMLElement) {
@@ -21,10 +21,6 @@ export function findText(text: string) {
   return `::-p-xpath(//*[contains(text(), '${text}')])`
 }
 
-export function formatDate(date: number): Moment {
-  return moment(date).tz('Europe/Paris')
-}
-
 export function formatTitle(title: string): string {
   return latinize(
     title
@@ -38,4 +34,8 @@ export function formatTitle(title: string): string {
 
 export function formatName(name: string): string {
   return latinize(name.replace(/'/g, ' ').replace(/\s+/g, ' ').trimEnd()).toLowerCase()
+}
+
+export function franceTZ(date: Moment): Moment {
+  return date.tz('Europe/Paris')
 }
