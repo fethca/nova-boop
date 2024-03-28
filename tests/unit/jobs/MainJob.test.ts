@@ -23,7 +23,6 @@ describe('run', () => {
 
   beforeEach(() => {
     vi.useRealTimers()
-    store.get = vi.fn().mockResolvedValue(1710950044)
     setTempDate('03/20/2024', '12:12')
     NovaJob.prototype.run = vi.fn().mockResolvedValue([mockTrack()])
   })

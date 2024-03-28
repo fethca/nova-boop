@@ -9,6 +9,5 @@ export function getTempDate() {
 
 export function setTempDate(date: string, hour: string) {
   const dateFormat = 'MM/DD/YYYY HH:mm'
-  const frenchDate = franceTZ(moment(`${date} ${hour}`, dateFormat))
-  tempDate = frenchDate.utc().valueOf()
+  tempDate = franceTZ(moment(`${date} ${hour}`, dateFormat)).valueOf()
 }
