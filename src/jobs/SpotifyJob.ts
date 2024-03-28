@@ -13,7 +13,7 @@ export class SpotifyJob {
   async run(tracks: ITrack[]) {
     const { success, failure } = this.logger.action('spotify_handle_tracks')
     try {
-      await spotifyService.refreshAccessToken()
+      await spotifyService.refreshToken()
       const ids: string[] = []
       for (const track of tracks) {
         const id = await this.getId(track)

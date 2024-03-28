@@ -16,10 +16,10 @@ describe('run', () => {
     spotifyService.fetchPlaylist = vi.fn().mockResolvedValue(['id12', 'id72'])
   })
 
-  it('should refresh access token', async () => {
+  it('should refresh token', async () => {
     const job = createJob()
     await job.run([mockTrack()])
-    expect(spotifyService.refreshAccessToken).toHaveBeenCalledWith()
+    expect(spotifyService.refreshToken).toHaveBeenCalledWith()
   })
 
   it('should get id of each track', async () => {
