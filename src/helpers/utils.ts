@@ -1,5 +1,5 @@
 import latinize from 'latinize'
-import { Moment } from 'moment-timezone'
+import { DateTime } from 'luxon'
 
 export function click(element: unknown) {
   if (element instanceof HTMLElement) {
@@ -36,6 +36,6 @@ export function formatName(name: string): string {
   return latinize(name.replace(/'/g, ' ').replace(/\s+/g, ' ').trimEnd()).toLowerCase()
 }
 
-export function franceTZ(date: Moment): Moment {
-  return date.tz('Europe/Paris')
+export function franceTZ(date: DateTime): DateTime {
+  return date.setZone('Europe/Paris')
 }

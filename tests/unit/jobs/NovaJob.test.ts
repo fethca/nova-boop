@@ -1,6 +1,5 @@
 import { MockedLogger, mockAction } from '@fethcat/logger'
 import mockdate from 'mockdate'
-import moment from 'moment-timezone'
 import { Page } from 'puppeteer'
 import { setTempDate } from '../../../src/helpers/redis.js'
 import * as utils from '../../../src/helpers/utils.js'
@@ -10,7 +9,7 @@ import { MockedPuppeteer, mockBrowser, mockElement, mockPage, mockTrack } from '
 
 vi.mock('../../../src/modules/puppeteer')
 vi.mock('../../../src/helpers/redis')
-const fromDate = moment(1710239648000) //Tuesday, March 12, 2024 10:34:08 AM UTC
+const fromDate = 1710239648000 //Tuesday, March 12, 2024 10:34:08 AM UTC
 mockdate.set(1711103648000) // Friday, March 22, 2024 10:34:08 AM UTC
 
 describe('run', () => {
@@ -140,7 +139,7 @@ describe('scrappeDays', () => {
 
   it('should scrappe the day of the given date precisely to the french summer hour', async () => {
     const job = createJob()
-    await job['scrappeDays'](mockPage(), moment(1690539700000)) //July 28, 2023 10:21:40 AM UTC
+    await job['scrappeDays'](mockPage(), 1690539700000) //July 28, 2023 10:21:40 AM UTC
     expect(job['scrappeDay']).toHaveBeenCalledWith(mockPage(), '07/28/2023', '12:21')
   })
 

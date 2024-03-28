@@ -1,5 +1,5 @@
 import { ILogger, Logger } from '@fethcat/logger'
-import moment from 'moment'
+import { DateTime } from 'luxon'
 import { getTempDate } from '../helpers/redis.js'
 import { store } from '../services/services.js'
 import { Message, settings } from '../settings.js'
@@ -14,8 +14,7 @@ export class MainJob {
   async run(): Promise<void> {
     const { success, failure } = this.logger.action('main_job')
     try {
-      const storedDate = await this.getLastUpdateDate()
-      const from = moment(storedDate).utc()
+      const from = await this.getLastUpdateDate()
       const songs = await new NovaJob().run(from)
       if (songs.length) {
         const success = await new SpotifyJob().run(songs)
@@ -46,7 +45,7 @@ export class MainJob {
           store.localInstance.delete('last-update')
         }
       }
-      const date = moment(timestamp).utc().format('MM/DD/YYYY hh:mm z')
+      const date = DateTime.fromMillis(timestamp).toUTC().toFormat("MM/dd/yyyy HH:mm 'UTC'")
       success({ timestamp, date })
       return timestamp
     } catch (error) {
@@ -57,7 +56,7 @@ export class MainJob {
   private async setLastUpdateDate(timestamp: number): Promise<void> {
     const { success, failure } = this.logger.action('redis_set_last_update_date')
     try {
-      const date = moment(timestamp).utc().format('MM/DD/YYYY hh:mm z')
+      const date = DateTime.fromMillis(timestamp).toUTC().toFormat("MM/dd/yyyy HH:mm 'UTC'")
       await store.set('last-update', timestamp.toString())
       success({ timestamp, date })
     } catch (error) {
