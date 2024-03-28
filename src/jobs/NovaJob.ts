@@ -99,8 +99,8 @@ export class NovaJob {
       const fromHour = now.toFormat('MM/dd/yyyy') === day ? now.hour : 24
       const times = this.calculateLoad(parseInt(toHour.slice(0, 2)), fromHour)
 
+      await wait(2000)
       await this.loadMore(page, times)
-      await wait(1000)
 
       const tracksBlock = await page.$('#js-programs-list')
       const tracks = await tracksBlock?.$$('.wwtt_right')
