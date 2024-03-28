@@ -4,7 +4,7 @@ import uniqWith from 'lodash.uniqwith'
 import moment, { Moment } from 'moment-timezone'
 import { Browser, ElementHandle, Page } from 'puppeteer'
 import { setTempDate } from '../helpers/redis.js'
-import { click, findText, wait } from '../helpers/utils.js'
+import { click, findText, franceTZ, wait } from '../helpers/utils.js'
 import { PuppeteerManager } from '../modules/puppeteer.js'
 import { Message, settings } from '../settings.js'
 import { ITrack } from '../types.js'
@@ -60,9 +60,9 @@ export class NovaJob {
     const diff = this.calculateDiff(from)
     const result: ITrack[] = []
     for (let i = 0; i <= diff; i++) {
-      const hour = i === 0 ? from.format('HH:mm') : '00:00'
-      const fromDate = from.clone().add(i, 'days').format('MM/DD/YYYY')
-      const tracks = await this.scrappeDay(page, fromDate, hour)
+      const hour = i === 0 ? franceTZ(from).format('HH:mm') : '00:00'
+      const day = franceTZ(from).clone().add(i, 'days').format('MM/DD/YYYY')
+      const tracks = await this.scrappeDay(page, day, hour)
       if (tracks.length) result.unshift(...tracks)
       else break
     }
@@ -70,17 +70,17 @@ export class NovaJob {
   }
 
   private calculateDiff(from: Moment) {
-    const fromDate = moment(from).startOf('day')
-    const nowDate = moment(Date.now()).startOf('day')
+    const fromDate = franceTZ(moment(from)).startOf('day')
+    const nowDate = franceTZ(moment(Date.now())).startOf('day')
     return nowDate.diff(fromDate, 'days')
   }
 
-  private async scrappeDay(page: Page, beginDate: string, toHour: string = '00:00'): Promise<ITrack[]> {
-    const { success, failure, skip } = this.logger.action('nova_scrapping_day', { beginDate, toHour })
+  private async scrappeDay(page: Page, day: string, toHour: string = '00:00'): Promise<ITrack[]> {
+    const { success, failure, skip } = this.logger.action('nova_scrapping_day', { day, toHour })
     try {
       const calendar = await page.$('input[name=programDate]')
       await calendar?.focus()
-      await calendar?.type(beginDate)
+      await calendar?.type(day)
 
       const selects = await page.$$('.ui-timepicker-select')
 
@@ -95,7 +95,8 @@ export class NovaJob {
       const filtrer = await page.waitForSelector(findText('Filtrer'))
       await filtrer?.evaluate(click)
 
-      const fromHour = moment(beginDate, 'MM/DD').isSame(new Date(), 'day') ? new Date().getHours() + 1 : 24
+      const now = franceTZ(moment(new Date()))
+      const fromHour = franceTZ(moment(day, 'MM/DD')).isSame(now, 'day') ? now.hour() : 24
       const times = this.calculateLoad(parseInt(toHour.slice(0, 2)), fromHour)
 
       await this.loadMore(page, times)
@@ -116,7 +117,7 @@ export class NovaJob {
         if (allTracks) break
         await this.loadMore(page, 1)
       }
-      result = await this.extract(tracks, beginDate, toHour)
+      result = await this.extract(tracks, day, toHour)
 
       success({ results: result.length })
       return result
