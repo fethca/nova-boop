@@ -10,8 +10,8 @@ import { MockedPuppeteer, mockBrowser, mockElement, mockPage, mockTrack } from '
 
 vi.mock('../../../src/modules/puppeteer')
 vi.mock('../../../src/helpers/redis')
-const fromDate = moment(1710239648000).tz('Europe/Paris') //Tuesday, March 12, 2024 11:34:08 AM
-mockdate.set(1711103648000) // Friday, March 22, 2024 10:34:08 AM
+const fromDate = moment(1710239648000) //Tuesday, March 12, 2024 10:34:08 AM UTC
+mockdate.set(1711103648000) // Friday, March 22, 2024 10:34:08 AM UTC
 
 describe('run', () => {
   function createJob() {
@@ -132,10 +132,16 @@ describe('scrappeDays', () => {
     expect(job['scrappeDay']).toHaveBeenCalledTimes(11)
   })
 
-  it('should scrappe the day of the given date precisely to the french hour', async () => {
+  it('should scrappe the day of the given date precisely to the french winter hour', async () => {
     const job = createJob()
     await job['scrappeDays'](mockPage(), fromDate)
     expect(job['scrappeDay']).toHaveBeenCalledWith(mockPage(), '03/12/2024', '11:34')
+  })
+
+  it('should scrappe the day of the given date precisely to the french summer hour', async () => {
+    const job = createJob()
+    await job['scrappeDays'](mockPage(), moment(1690539700000)) //July 28, 2023 10:21:40 AM UTC
+    expect(job['scrappeDay']).toHaveBeenCalledWith(mockPage(), '07/28/2023', '12:21')
   })
 
   it('should stop at the last successfully scrapped day', async () => {
