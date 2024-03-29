@@ -64,7 +64,6 @@ export class NovaJob {
       const day = franceTZ(DateTime.fromMillis(from)).plus({ days: i }).toFormat('MM/dd/yyyy')
       const tracks = await this.scrappeDay(page, day, hour)
       if (tracks.length) result.unshift(...tracks)
-      else break
     }
     return result
   }

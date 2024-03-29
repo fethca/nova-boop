@@ -143,14 +143,6 @@ describe('scrappeDays', () => {
     expect(job['scrappeDay']).toHaveBeenCalledWith(mockPage(), '07/28/2023', '12:21')
   })
 
-  it('should stop at the last successfully scrapped day', async () => {
-    const job = createJob()
-    job['scrappeDay'] = vi.fn().mockResolvedValueOnce([mockTrack()]).mockResolvedValue([])
-    const result = await job['scrappeDays'](mockPage(), fromDate)
-    expect(job['scrappeDay']).toHaveBeenCalledTimes(2)
-    expect(result).toEqual([mockTrack()])
-  })
-
   it('should return tracks ordered from earliest to oldest', async () => {
     const job = createJob()
     job['scrappeDay'] = vi
