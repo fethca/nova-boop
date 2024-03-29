@@ -10,25 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Docker
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
         with:
-          node-version: 20.9.0
-          registry-url: https://registry.npmjs.org/
+          version: 8
+      # Setup Node environment
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.9.0'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: |
           export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-          yarn install
+          pnpm install
 
       - name: Lint, format & tests
         run: |
-          yarn lint
-          yarn format --check
-          yarn test:unit
+          pnpm lint
+          pnpm format --check
+          pnpm test:unit
 
       - name: Build and push Docker image
         run: |
