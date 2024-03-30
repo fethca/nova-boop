@@ -12,9 +12,10 @@ FROM base as source
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-COPY yarn.lock ./
+COPY pnpm-lock.yaml ./
 COPY package.json ./
-RUN yarn install --frozen-lockfile --production=false
+RUN npm install -g pnpm
+RUN pnpm install --frozen-lockfile --production=false
 COPY types ./types
 COPY src ./src
 
@@ -22,7 +23,7 @@ COPY src ./src
 
 FROM source as dependencies
 
-RUN yarn install --frozen-lockfile --force --production --ignore-scripts --prefer-offline
+RUN pnpm install --frozen-lockfile --production --ignore-scripts
 
 ### Test stage #####
 
@@ -31,7 +32,7 @@ FROM source as test
 COPY tsconfig.json ./
 COPY vitest.config.ts ./
 COPY tests ./tests
-RUN yarn vitest run --coverage
+RUN pnpm vitest run --coverage
 
 #### Build stage ####
 
@@ -39,7 +40,7 @@ FROM source as build
 
 COPY tsconfig.json ./
 COPY tsconfig.build.json ./
-RUN NODE_OPTIONS="--max-old-space-size=4096" yarn build
+RUN NODE_OPTIONS="--max-old-space-size=4096" pnpm build
 
 ###### Release stage #####
 
