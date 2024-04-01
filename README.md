@@ -7,7 +7,7 @@ Nova Boop is an application designed to crawl the [Radio Nova](https://www.nova.
 Before installing Nova Boop, ensure you have the following prerequisites met:
 
 - Node.js installed on your system
-- Yarn package manager installed
+- pnpm package manager installed
 - Access to a Redis instance
 - A Spotify playlist where tracks will be uploaded
 - A Spotify access token for the playlist (See the [Spotify access token](#get-a-spotify-access-token) section below for details)
@@ -17,7 +17,7 @@ Before installing Nova Boop, ensure you have the following prerequisites met:
 To install the required node modules for Nova Boop, run the following command:
 
 ```sh
-yarn install
+pnpm install
 ```
 
 ### Environment Setup
@@ -56,7 +56,7 @@ To obtain a Spotify access token:
 To run Nova Boop in watch mode (with the debugger listening on port `9999`), execute:
 
 ```sh
-yarn start:dev
+pnpm start:dev
 ```
 
 If necessary, attach a debugger by using the `Debug` configuration in `.vscode/launch.json`.

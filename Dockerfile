@@ -6,6 +6,12 @@ FROM node:20.9.0-slim as base
 
 WORKDIR /usr/app
 
+##### SET UP PNPM ######
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
 #####  Source stage ######
 
 FROM base as source
@@ -14,8 +20,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 COPY pnpm-lock.yaml ./
 COPY package.json ./
-RUN npm install -g pnpm
-RUN pnpm install --frozen-lockfile --production=false
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --production=false
 COPY types ./types
 COPY src ./src
 
@@ -23,7 +28,7 @@ COPY src ./src
 
 FROM source as dependencies
 
-RUN pnpm install --frozen-lockfile --production --ignore-scripts
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --production --ignore-scripts
 
 ### Test stage #####
 
