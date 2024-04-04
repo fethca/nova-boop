@@ -5,7 +5,7 @@ import { setTempDate } from '../../../src/helpers/redis.js'
 import * as utils from '../../../src/helpers/utils.js'
 import { click, findText } from '../../../src/helpers/utils.js'
 import { NovaJob } from '../../../src/jobs/NovaJob.js'
-import { MockedPuppeteer, mockBrowser, mockElement, mockPage, mockTrack } from '../../mock.js'
+import { MockedPuppeteer, mockElement, mockPage, mockTrack } from '../../mock.js'
 
 vi.mock('../../../src/modules/puppeteer')
 vi.mock('../../../src/helpers/redis')
@@ -58,16 +58,10 @@ describe('scrappe', () => {
     return job
   }
 
-  it('should create a new browser', async () => {
-    const job = createJob()
-    await job['scrappe'](fromDate)
-    expect(job['puppeteer'].runBrowser).toHaveBeenCalledWith()
-  })
-
   it('should open nova page', async () => {
     const job = createJob()
     await job['scrappe'](fromDate)
-    expect(job['puppeteer'].createPage).toHaveBeenCalledWith(mockBrowser(), 'https://nova.fr/c-etait-quoi-ce-titre')
+    expect(job['puppeteer'].createPage).toHaveBeenCalledWith('https://nova.fr/c-etait-quoi-ce-titre')
   })
 
   it('should accept cookies', async () => {
@@ -88,7 +82,7 @@ describe('scrappe', () => {
   it('should close browser', async () => {
     const job = createJob()
     await job['scrappe'](fromDate)
-    expect(job['puppeteer'].release).toHaveBeenCalledWith(mockBrowser())
+    expect(job['puppeteer'].destroy).toHaveBeenCalledWith()
   })
 
   it('should log success', async () => {
@@ -110,7 +104,7 @@ describe('scrappe', () => {
     const { failure } = mockAction(job['logger'])
     job['scrappeDays'] = vi.fn().mockRejectedValue(new Error('500'))
     await expect(job['scrappe'](fromDate)).rejects.toThrow(new Error('500'))
-    expect(job['puppeteer'].release).toHaveBeenCalledWith(mockBrowser())
+    expect(job['puppeteer'].destroy).toHaveBeenCalledWith()
     expect(failure).toHaveBeenCalledWith(new Error('500'))
   })
 })

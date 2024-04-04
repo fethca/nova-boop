@@ -11,19 +11,19 @@ export const mockTrack = (track?: Partial<ITrack>) => ({
 })
 
 export class MockedPuppeteer implements IPuppeteerManager {
-  isReleased = false
-  retries = 0
   logger = new MockedLogger()
+  isReleased = false
+  userAgents = []
+  browser = {} as unknown as Browser
+  chromePath = 'chromePath'
   init = vi.fn()
-  release = vi.fn()
-  runBrowser = vi.fn().mockResolvedValue(mockBrowser())
+  resetBrowser = vi.fn()
+  runBrowser = vi.fn().mockResolvedValue({} as unknown as Browser)
   createPage = vi.fn().mockResolvedValue({
     $: vi.fn().mockResolvedValue({ click: vi.fn() }),
   })
-}
-
-export function mockBrowser(): Browser {
-  return {} as unknown as Browser
+  getRandomUA = vi.fn()
+  destroy = vi.fn()
 }
 
 type IPage = { page: Page; element: ElementHandle<Element>; elements: ElementHandle<Element>[] }
