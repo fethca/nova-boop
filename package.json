@@ -69,7 +69,7 @@
     "prettier": "^3.2.5",
     "puppeteer-extra-plugin": "^3.2.3",
     "tsx": "^4.7.2",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.4"
   },
   "prettier": "@fethcat/prettier-config",
   "nodemonConfig": {
