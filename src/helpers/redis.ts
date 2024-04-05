@@ -8,5 +8,7 @@ export function getTempDate() {
 
 export function setTempDate(date: string, hour: string) {
   const parisDate = DateTime.fromFormat(`${date} ${hour}`, 'MM/dd/yyyy HH:mm', { zone: 'Europe/Paris' })
-  tempDate = parisDate.toUTC().toMillis()
+  const timestamp = parisDate.toUTC().toMillis()
+  const now = DateTime.now().toMillis()
+  tempDate = timestamp > now ? now : timestamp
 }

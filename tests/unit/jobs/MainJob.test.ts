@@ -46,6 +46,14 @@ describe('run', () => {
     expect(job['setLastUpdateDate']).toHaveBeenCalledWith(1710933120000)
   })
 
+  it('should set now if extract UTC date is in the future', async () => {
+    setTempDate('03/20/2072', '12:12')
+    SpotifyJob.prototype.run = vi.fn().mockResolvedValue(true)
+    const job = createJob()
+    await job.run()
+    expect(job['setLastUpdateDate']).toHaveBeenCalledWith(1711014631000)
+  })
+
   it('should not set last update date if spotify job failed', async () => {
     const job = createJob()
     await job.run()
