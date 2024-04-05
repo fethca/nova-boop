@@ -9,9 +9,9 @@
     "lint": "eslint \"{src,tests}/**/*.{ts,tsx}\"",
     "test:unit": "vitest run --coverage",
     "start:dev": "nodemon -r dotenv/config --inspect=9999 src/index.ts",
-    "version:patch": "version-fethca patch",
-    "version:minor": "version-fethca minor",
-    "version:major": "version-fethca major"
+    "version:patch": "fethca-version patch",
+    "version:minor": "fethca-version minor",
+    "version:major": "fethca-version major"
   },
   "repository": {
     "type": "git",
