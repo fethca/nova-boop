@@ -94,7 +94,6 @@ export class PuppeteerManager implements IPuppeteerManager {
         devtools: false,
         ignoreHTTPSErrors: true,
         slowMo: 0,
-        targetFilter: (target) => !!target.url(),
         args: [
           '--disable-gpu',
           '--no-sandbox',
@@ -119,7 +118,7 @@ export class PuppeteerManager implements IPuppeteerManager {
     try {
       if (!this.browser) throw new Error("couldn't run browser")
       const userAgent = await this.getRandomUA()
-      const [page] = await this.browser.pages()
+      const page = await this.browser.newPage()
       await page.setViewport({
         width: 1920 + Math.floor(Math.random() * 100),
         height: 3000 + Math.floor(Math.random() * 100),
@@ -148,7 +147,7 @@ export class PuppeteerManager implements IPuppeteerManager {
         Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] })
       })
 
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 })
+      await page.goto(url)
       success()
       return page
     } catch (error) {
