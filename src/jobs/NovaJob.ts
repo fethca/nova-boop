@@ -2,7 +2,7 @@ import { ILogger, Logger } from '@fethcat/logger'
 import isEqual from 'lodash.isequal'
 import uniqWith from 'lodash.uniqwith'
 import { DateTime } from 'luxon'
-import { Browser, ElementHandle, Page } from 'puppeteer'
+import { ElementHandle, Page } from 'puppeteer'
 import { setTempDate } from '../helpers/redis.js'
 import { click, findText, franceTZ, wait } from '../helpers/utils.js'
 import { PuppeteerManager } from '../modules/puppeteer.js'
@@ -25,6 +25,7 @@ export class NovaJob {
   async run(from: number): Promise<ITrack[]> {
     const { success, failure } = this.logger.action('nova_fetch_items')
     try {
+      await this.puppeteer.init()
       const tracks = await this.scrappe(from)
       success()
       return tracks
@@ -36,22 +37,19 @@ export class NovaJob {
 
   private async scrappe(from: number): Promise<ITrack[]> {
     const { success, failure } = this.logger.action('nova_scrapping')
-
-    const browser: Browser = await this.puppeteer.runBrowser()
-
     try {
-      const page = await this.puppeteer.createPage(browser, 'https://nova.fr/c-etait-quoi-ce-titre')
+      const page = await this.puppeteer.createPage('https://nova.fr/c-etait-quoi-ce-titre')
 
       const cookies = await page.$('#didomi-notice-agree-button')
       await cookies?.click()
 
       const scrappe = await this.scrappeDays(page, from)
       const tracks = uniqWith(scrappe, isEqual)
-      await this.puppeteer.release(browser)
+      await this.puppeteer.destroy()
       success({ nbTracks: tracks.length })
       return tracks
     } catch (error) {
-      await this.puppeteer.release(browser)
+      await this.puppeteer.destroy()
       throw failure(error)
     }
   }

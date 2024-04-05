@@ -1,4 +1,4 @@
-import { Browser, Page } from 'puppeteer'
+import { Page } from 'puppeteer'
 
 export interface Response<T> {
   body: T
@@ -15,9 +15,8 @@ export type ITrack = {
 
 export interface IPuppeteerManager {
   init(): Promise<void>
-  runBrowser(): Promise<Browser>
-  createPage(browser: Browser, url: string): Promise<Page>
-  release(browser: Browser): Promise<void>
+  createPage(url: string): Promise<Page>
+  destroy(): Promise<void>
 }
 
 export type ISpotifyError = {
