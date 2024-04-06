@@ -185,9 +185,9 @@ export class PuppeteerManager implements IPuppeteerManager {
   async destroy() {
     const { success, failure } = this.logger.action('puppeteer_stop_browser')
     try {
-      if (this.browser) await this.browser.close()
-      this.userAgents = []
       this.isReleased = true
+      this.userAgents = []
+      if (this.browser) await this.browser.close()
       success()
     } catch (error) {
       failure(error)
