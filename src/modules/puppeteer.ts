@@ -70,6 +70,7 @@ export class PuppeteerManager implements IPuppeteerManager {
   async resetBrowser() {
     const { success, failure } = this.logger.action('puppeteer_reset_browser')
     try {
+      if (this.browser) await this.destroy()
       this.isReleased = false
       this.userAgents = []
       this.chromePath = await new Promise((resolve) => locateChrome((path) => resolve(path || '')))
