@@ -1,6 +1,6 @@
 # Nova Boop
 
-Nova Boop is an application designed to crawl the [Radio Nova](https://www.nova.fr/c-etait-quoi-ce-titre/) history every 30 minutes and upload the found tracks to a specified Spotify playlist. It's based on Puppeteer.
+Nova Boop is an application designed to crawl the [Radio Nova](https://www.nova.fr/c-etait-quoi-ce-titre/) history every 30 minutes and upload the found tracks to a specified Spotify playlist. It's based on Puppeteer. My [spotify playlist](https://open.spotify.com/playlist/4EEah67abwbnscHLmqtERd) is currently private because of Spotify policies. 
 
 ## Prerequisites
 
